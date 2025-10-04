@@ -73,7 +73,7 @@ npm run fetch:earthdata-token -- --save
 
 The script prompts for your NASA Earthdata Login credentials, requests a short-lived bearer token directly from NASA, and writes the token to `.env.local` (already gitignored) so that the frontend helpers can authenticate SEDAC requests without exposing secrets.
 
-## How can I deploy this project?
+Full copy-and-paste API calls—including NASA Earthdata token minting, Copernicus OData queries, WorldPop downloads, and Resource Watch SQL—are documented in [`docs/data-api-catalog.md`](docs/data-api-catalog.md).
 
 ## Project scripts
 

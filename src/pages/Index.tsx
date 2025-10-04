@@ -10,11 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
 const Index = () => {
+  const mapZoom = 10;
   const [selectedCity, setSelectedCity] = useState("Metro Manila");
   const [selectedDate, setSelectedDate] = useState(
     new Date(Date.now() - 86400000).toISOString().split('T')[0] // Yesterday
   );
-  const [activeLayers, setActiveLayers] = useState<string[]>(["lst"]);
+  const [activeLayers, setActiveLayers] = useState<string[]>([
+    "lst",
+    "ndvi",
+    "precipitation",
+    "ghsl_built",
+    "worldpop_population",
+  ]);
 
   const handleLayerToggle = (layer: string) => {
     setActiveLayers(prev =>
@@ -86,6 +93,13 @@ const Index = () => {
               />
             </div>
 
+            <ApiCallPanel
+              center={cityCoords}
+              selectedCity={selectedCity}
+              selectedDate={selectedDate}
+              zoom={mapZoom}
+            />
+
             <Button className="w-full gap-2" variant="outline">
               <Download className="w-4 h-4" />
               Export Report
@@ -96,7 +110,7 @@ const Index = () => {
           <div className="lg:col-span-3 relative">
             <MapView
               center={[cityCoords.lat, cityCoords.lon]}
-              zoom={10}
+              zoom={mapZoom}
               activeLayers={activeLayers}
               selectedDate={selectedDate}
               selectedCity={selectedCity}
