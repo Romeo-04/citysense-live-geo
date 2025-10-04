@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { buildGIBSTileURL, GIBS_LAYERS } from "@/lib/nasa-api";
 
 interface MapViewProps {
   center: [number, number];
@@ -49,22 +50,6 @@ const MapView = ({ center, zoom, activeLayers, selectedDate }: MapViewProps) => 
 
     const map = mapInstanceRef.current;
 
-    // Define NASA GIBS layers
-    const layerConfigs: { [key: string]: { layer: string; format: string } } = {
-      lst: {
-        layer: 'MODIS_Terra_Land_Surface_Temp_Day',
-        format: 'png'
-      },
-      ndvi: {
-        layer: 'MODIS_Terra_NDVI_8Day',
-        format: 'png'
-      },
-      precipitation: {
-        layer: 'GPM_3IMERGHH_06_precipitation',
-        format: 'png'
-      }
-    };
-
     // Remove layers that are no longer active
     Object.keys(layersRef.current).forEach(key => {
       if (!activeLayers.includes(key)) {
@@ -73,24 +58,32 @@ const MapView = ({ center, zoom, activeLayers, selectedDate }: MapViewProps) => 
       }
     });
 
-    // Add new active layers
+    // Add new active layers using NASA API
     activeLayers.forEach(layerKey => {
       if (layersRef.current[layerKey]) return;
 
-      const config = layerConfigs[layerKey];
-      if (!config) return;
+      // Check if layer exists in GIBS configuration
+      if (!GIBS_LAYERS[layerKey]) {
+        console.warn(`Layer ${layerKey} not found in GIBS catalog`);
+        return;
+      }
 
-      const gibsLayer = L.tileLayer(
-        `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${config.layer}/default/${selectedDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.${config.format}`,
-        {
-          attribution: 'NASA GIBS',
+      try {
+        // Build dynamic tile URL using NASA API utility
+        const tileUrl = buildGIBSTileURL(layerKey, selectedDate);
+
+        const gibsLayer = L.tileLayer(tileUrl, {
+          attribution: '©NASA GIBS',
           opacity: 0.7,
           tileSize: 256,
-        }
-      );
+          maxZoom: 9,
+        });
 
-      gibsLayer.addTo(map);
-      layersRef.current[layerKey] = gibsLayer;
+        gibsLayer.addTo(map);
+        layersRef.current[layerKey] = gibsLayer;
+      } catch (error) {
+        console.error(`Failed to load layer ${layerKey}:`, error);
+      }
     });
   }, [activeLayers, selectedDate]);
 

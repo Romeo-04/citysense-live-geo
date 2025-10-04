@@ -32,6 +32,9 @@ const layers = [
   { id: "lst", name: "Land Surface Temperature", icon: "🌡️" },
   { id: "ndvi", name: "Vegetation Index (NDVI)", icon: "🌿" },
   { id: "precipitation", name: "Precipitation", icon: "🌧️" },
+  { id: "aod", name: "Air Quality (AOD)", icon: "💨" },
+  { id: "no2", name: "NO₂ Pollution", icon: "🏭" },
+  { id: "nightlights", name: "Night Lights", icon: "🌃" },
 ];
 
 const ControlPanel = ({
