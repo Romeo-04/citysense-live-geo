@@ -60,6 +60,14 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Data source API references
+
+The NASA data services used by CitySense Live Geo (GIBS WMTS tiles and SEDAC WMS/WCS layers) require specific API calls and, in some cases, authentication tokens. See [`docs/nasa-api-calls.md`](docs/nasa-api-calls.md) for copy-and-paste examples covering:
+
+- Retrieving NASA GIBS tiles for a given date.
+- Minting an Earthdata Login bearer token.
+- Downloading SEDAC map imagery.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/00e61fe6-ebe2-4100-9f6e-21c4a5b56e05) and click on Share -> Publish.
