@@ -4,9 +4,18 @@
 export const SEDAC_WMS_BASE = 'https://sedac.ciesin.columbia.edu/geoserver/wms';
 export const SEDAC_WCS_BASE = 'https://sedac.ciesin.columbia.edu/geoserver/wcs';
 
-// IMPORTANT: Store this token securely - consider using Lovable Cloud secrets for production
-// Token expires: May 2025 (exp: 1764756514)
-export const NASA_EARTHDATA_TOKEN = 'eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6ImFjbXJzdSIsImV4cCI6MTc2NDc1NjUxNCwiaWF0IjoxNzU5NTcyNTE0LCJpc3MiOiJodHRwczovL3Vycy5lYXJ0aGRhdGEubmFzYS5nb3YiLCJpZGVudGl0eV9wcm92aWRlciI6ImVkbF9vcHMiLCJhY3IiOiJlZGwiLCJhc3N1cmFuY2VfbGV2ZWwiOjN9.hwZTEWTqF-iHEell4s8OYLlS7TjyBxMz_IoU7DtZ_E8KLFI3jpkquBMEo_b5OY8UqqkxIRYEDbfa_lJytjsORyd1tjSUI7GLdaE6FM6-_9XlJwVd8E_mYkxGhhFwYINRxGINVN01Oxh3MDmxxxYKpWkNfEogCTtR-EQSkKcnug5IMBu_YRtZgQjYRgPWNxfR_r0pEtPurcoSCOHx6i7pSGjkeO7x48rG0g2zuObxaMZ8ew6gQqQq8eFLU-z253uomSHS6MPaD6dsA95CTMftEHAxCWpLOGNEc9RtDrlWD-DzJmZ5NqOmhIFAVABdCJQGFAYFvChLn9edOgiy-UkewQ';
+function resolveEarthdataToken(tokenOverride?: string): string {
+  const envToken = import.meta.env?.VITE_NASA_EARTHDATA_TOKEN;
+  const token = tokenOverride ?? envToken;
+
+  if (!token) {
+    throw new Error(
+      'NASA Earthdata token is required. Run `npm run fetch:earthdata-token` to mint one and place it in VITE_NASA_EARTHDATA_TOKEN.'
+    );
+  }
+
+  return token;
+}
 
 export interface SEDACLayerConfig {
   workspace: string;
@@ -42,7 +51,8 @@ export async function fetchSEDACMap(
   bbox: [number, number, number, number], // [minLon, minLat, maxLon, maxLat]
   width: number = 1024,
   height: number = 512,
-  crs: string = 'EPSG:4326'
+  crs: string = 'EPSG:4326',
+  authToken?: string
 ): Promise<Blob> {
   const layerConfig = SEDAC_LAYERS[layerKey];
   if (!layerConfig) {
@@ -65,9 +75,11 @@ export async function fetchSEDACMap(
 
   const url = `${SEDAC_WMS_BASE}?${params.toString()}`;
 
+  const token = resolveEarthdataToken(authToken);
+
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`
+      'Authorization': `Bearer ${token}`
     }
   });
 
@@ -93,12 +105,14 @@ export function getSEDACWMSUrl(layerKey: string): string {
 /**
  * Fetch SEDAC capabilities
  */
-export async function fetchSEDACCapabilities(): Promise<string> {
+export async function fetchSEDACCapabilities(authToken?: string): Promise<string> {
   const url = `${SEDAC_WMS_BASE}?service=WMS&version=1.3.0&request=GetCapabilities`;
-  
+
+  const token = resolveEarthdataToken(authToken);
+
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`
+      'Authorization': `Bearer ${token}`
     }
   });
 
@@ -115,7 +129,8 @@ export async function fetchSEDACCapabilities(): Promise<string> {
 export async function downloadSEDACRaster(
   layerKey: string,
   bbox: [number, number, number, number],
-  format: string = 'GeoTIFF'
+  format: string = 'GeoTIFF',
+  authToken?: string
 ): Promise<Blob> {
   const layerConfig = SEDAC_LAYERS[layerKey];
   if (!layerConfig) {
@@ -134,9 +149,11 @@ export async function downloadSEDACRaster(
 
   const url = `${SEDAC_WCS_BASE}?${params.toString()}`;
 
+  const token = resolveEarthdataToken(authToken);
+
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`
+      'Authorization': `Bearer ${token}`
     }
   });
 
