@@ -3,7 +3,6 @@ import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import ControlPanel from "@/components/ControlPanel";
 import IndicatorCard from "@/components/IndicatorCard";
-import ApiCallPanel from "@/components/ApiCallPanel";
 import { LAYER_CATALOG } from "@/lib/layer-catalog";
 import { CITY_COORD_LOOKUP } from "@/lib/cities";
 import { Thermometer, Trees, Droplets, Users } from "lucide-react";

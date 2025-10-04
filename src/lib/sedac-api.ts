@@ -14,6 +14,14 @@ function resolveEarthdataToken(
   if (!token && required) {
     throw new Error(
       'NASA Earthdata token is required. Run `npm run fetch:earthdata-token` to mint one and place it in VITE_NASA_EARTHDATA_TOKEN.'
+function resolveEarthdataToken(tokenOverride?: string): string {
+  const envToken = import.meta.env?.VITE_NASA_EARTHDATA_TOKEN;
+  const token = tokenOverride ?? envToken;
+
+  if (!token) {
+    throw new Error(
+      'NASA Earthdata token is required. Run `npm run fetch:earthdata-token` to mint one and place it in VITE_NASA_EARTHDATA_TOKEN.'
+      'NASA Earthdata token is required. Set VITE_NASA_EARTHDATA_TOKEN in your environment or pass a token explicitly.'
     );
   }
 
@@ -79,12 +87,12 @@ export async function fetchSEDACMap(
   const url = `${SEDAC_WMS_BASE}?${params.toString()}`;
 
   const token = resolveEarthdataToken(authToken);
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 
   if (!response.ok) {
     throw new Error(`SEDAC WMS request failed: ${response.statusText}`);
@@ -119,6 +127,12 @@ export async function fetchSEDACCapabilities(authToken?: string): Promise<string
 
   const response = await fetch(url, { headers });
 
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
   if (!response.ok) {
     throw new Error(`Failed to fetch SEDAC capabilities: ${response.statusText}`);
   }
@@ -152,7 +166,7 @@ export async function downloadSEDACRaster(
 
   const url = `${SEDAC_WCS_BASE}?${params.toString()}`;
 
-  const token = resolveEarthdataToken(authToken, { required: true });
+  const token = resolveEarthdataToken(authToken);
 
   const response = await fetch(url, {
     headers: {
