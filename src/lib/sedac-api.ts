@@ -4,6 +4,16 @@
 export const SEDAC_WMS_BASE = 'https://sedac.ciesin.columbia.edu/geoserver/wms';
 export const SEDAC_WCS_BASE = 'https://sedac.ciesin.columbia.edu/geoserver/wcs';
 
+function resolveEarthdataToken(
+  tokenOverride?: string,
+  { required = false }: { required?: boolean } = {}
+): string | undefined {
+  const envToken = import.meta.env?.VITE_NASA_EARTHDATA_TOKEN;
+  const token = tokenOverride ?? envToken;
+
+  if (!token && required) {
+    throw new Error(
+      'NASA Earthdata token is required. Run `npm run fetch:earthdata-token` to mint one and place it in VITE_NASA_EARTHDATA_TOKEN.'
 function resolveEarthdataToken(tokenOverride?: string): string {
   const envToken = import.meta.env?.VITE_NASA_EARTHDATA_TOKEN;
   const token = tokenOverride ?? envToken;
@@ -110,6 +120,12 @@ export async function fetchSEDACCapabilities(authToken?: string): Promise<string
   const url = `${SEDAC_WMS_BASE}?service=WMS&version=1.3.0&request=GetCapabilities`;
 
   const token = resolveEarthdataToken(authToken);
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, { headers });
 
   const response = await fetch(url, {
     headers: {
