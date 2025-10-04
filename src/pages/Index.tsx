@@ -3,17 +3,11 @@ import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import ControlPanel from "@/components/ControlPanel";
 import IndicatorCard from "@/components/IndicatorCard";
+import { LAYER_CATALOG } from "@/lib/layer-catalog";
+import { CITY_COORD_LOOKUP } from "@/lib/cities";
 import { Thermometer, Trees, Droplets, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-
-const cities = {
-  "Metro Manila": { lat: 14.5995, lon: 120.9842 },
-  "Tokyo": { lat: 35.6762, lon: 139.6503 },
-  "New York": { lat: 40.7128, lon: -74.0060 },
-  "London": { lat: 51.5074, lon: -0.1278 },
-  "São Paulo": { lat: -23.5505, lon: -46.6333 },
-};
 
 const Index = () => {
   const [selectedCity, setSelectedCity] = useState("Metro Manila");
@@ -34,7 +28,14 @@ const Index = () => {
     setSelectedCity(city);
   };
 
-  const cityCoords = cities[selectedCity as keyof typeof cities];
+  const cityCoords = CITY_COORD_LOOKUP[selectedCity] ?? CITY_COORD_LOOKUP["Metro Manila"];
+  const activeLayerSources = Array.from(
+    new Set(
+      activeLayers
+        .map(layerId => LAYER_CATALOG[layerId]?.provider)
+        .filter((source): source is string => Boolean(source))
+    )
+  ).join(" · ");
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -98,10 +99,11 @@ const Index = () => {
               zoom={10}
               activeLayers={activeLayers}
               selectedDate={selectedDate}
+              selectedCity={selectedCity}
             />
             <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur px-3 py-2 rounded-lg border border-border/50 text-xs">
               <p className="text-muted-foreground">
-                Data sources: NASA GIBS · {selectedDate} · {selectedCity}
+                Data sources: {activeLayerSources || "Select a layer"} · {selectedDate} · {selectedCity}
               </p>
             </div>
           </div>
