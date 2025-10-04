@@ -57,6 +57,23 @@ This prompts for your NASA credentials (or reads `NASA_EARTHDATA_USERNAME`/`NASA
 | Population | `worldpop:ppp_2020_1km_Aggregated` | WorldPop WMS | 1 km national population mosaics. |
 
 Full copy-and-paste API calls—including NASA Earthdata token minting, Copernicus OData queries, WorldPop downloads, and Resource Watch SQL—are documented in [`docs/data-api-catalog.md`](docs/data-api-catalog.md).
+## Data source API references
+
+The NASA data services used by CitySense Live Geo (GIBS WMTS tiles and SEDAC WMS/WCS layers) require specific API calls and, in some cases, authentication tokens. See [`docs/nasa-api-calls.md`](docs/nasa-api-calls.md) for copy-and-paste examples covering:
+
+- Retrieving NASA GIBS tiles for a given date.
+- Minting an Earthdata Login bearer token.
+- Downloading SEDAC map imagery.
+
+To mint and securely store a NASA Earthdata token locally, run:
+
+```sh
+npm run fetch:earthdata-token -- --save
+```
+
+The script prompts for your NASA Earthdata Login credentials, requests a short-lived bearer token directly from NASA, and writes the token to `.env.local` (already gitignored) so that the frontend helpers can authenticate SEDAC requests without exposing secrets.
+
+## How can I deploy this project?
 
 ## Project scripts
 
