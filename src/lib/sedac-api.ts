@@ -10,6 +10,7 @@ function resolveEarthdataToken(tokenOverride?: string): string {
 
   if (!token) {
     throw new Error(
+      'NASA Earthdata token is required. Run `npm run fetch:earthdata-token` to mint one and place it in VITE_NASA_EARTHDATA_TOKEN.'
       'NASA Earthdata token is required. Set VITE_NASA_EARTHDATA_TOKEN in your environment or pass a token explicitly.'
     );
   }

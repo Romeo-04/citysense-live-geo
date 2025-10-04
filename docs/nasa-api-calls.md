@@ -35,6 +35,16 @@ Then call protected endpoints with the bearer token that is returned:
 Authorization: Bearer <USER_TOKEN>
 ```
 
+### Automating token minting (recommended)
+
+Run the helper script provided in this repository to mint a token directly from your terminal. The script prompts for your Earthdata credentials (or reads them from `NASA_EARTHDATA_USERNAME` / `NASA_EARTHDATA_PASSWORD` environment variables), requests a token from NASA, and can optionally persist the token to `.env.local` so it never touches source control:
+
+```bash
+npm run fetch:earthdata-token -- --save
+```
+
+Omit `--save` if you prefer to handle the token manually. The resulting token is stored in `.env.local` as `VITE_NASA_EARTHDATA_TOKEN`, which the frontend helpers read at runtime.
+
 ## 3. SEDAC — WMS map example (Population Exposure)
 
 ```bash
