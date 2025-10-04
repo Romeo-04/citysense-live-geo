@@ -1,4 +1,6 @@
 // NASA GIBS API utilities
+// Authentication: GIBS WMTS/WMS services are publicly accessible (no token required)
+// For protected NASA services (SEDAC, etc.), see sedac-api.ts
 
 export interface GIBSLayerConfig {
   layer: string;
