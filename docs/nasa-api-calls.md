@@ -1,6 +1,7 @@
 # NASA Data Access Cheat Sheet
 
 This document lists the primary NASA-specific API calls required to fetch datasets that power the CitySense Live Geo application. For a full multi-agency catalog (NASA, SEDAC, GHSL, WorldPop, Copernicus, Resource Watch, CSA, INDE, INPE), see [`docs/data-api-catalog.md`](./data-api-catalog.md).
+This document lists the primary API calls required to fetch NASA datasets that power the CitySense Live Geo application. Copy and paste the snippets below into your terminal or client of choice and adjust the parameters (layer names, dates, bounding boxes) for your needs.
 
 ## 1. NASA GIBS — WMTS (daily tiles, no auth required)
 

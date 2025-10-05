@@ -181,20 +181,12 @@ const bindPopup = (layer: L.Layer, title: string, feature: Feature) => {
   const narrative = props.narrative
     ? `<p class="mt-1 text-xs leading-snug text-muted-foreground">${props.narrative}</p>`
     : "";
-  const sourceLine = props.source
-    ? `<div class="text-[10px] uppercase tracking-wide text-muted-foreground/80">${props.source}${
-        props.sourceDate ? ` • ${props.sourceDate}` : ""
-      }</div>`
-    : props.sourceDate
-      ? `<div class="text-[10px] uppercase tracking-wide text-muted-foreground/80">${props.sourceDate}</div>`
-      : "";
   const content = `
     <div class="space-y-1">
       <div class="text-xs uppercase tracking-wide text-primary/80">${title}</div>
       ${location}
       ${value}
       ${narrative}
-      ${sourceLine}
     </div>
   `;
   if ((layer as L.Layer & { bindPopup?: (content: string) => void }).bindPopup) {
@@ -539,7 +531,7 @@ export const DEMO_LAYER_CONFIGS: Record<string, DemoLayerConfig> = {
   },
 };
 
-export const buildSyntheticDemoGeoJSON = (
+export const buildDemoGeoJSON = (
   layerKey: string,
   context: DemoContext,
 ): FeatureCollection | null => {

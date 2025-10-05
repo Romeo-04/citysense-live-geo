@@ -3,14 +3,18 @@ import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import ControlPanel from "@/components/ControlPanel";
 import IndicatorCard from "@/components/IndicatorCard";
-import ApiCallPanel from "@/components/ApiCallPanel";
 import { LAYER_CATALOG } from "@/lib/layer-catalog";
 import { CITY_COORD_LOOKUP } from "@/lib/cities";
-import { Thermometer, Trees, Droplets, Users } from "lucide-react";
+import { Thermometer, Trees, Droplets, Users, Wind, CloudRain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { useIndicatorData } from "@/hooks/useIndicatorData";
+import { useWeatherData } from "@/hooks/useWeatherData";
+import { generateReport, downloadReport } from "@/lib/report-generator";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const { toast } = useToast();
   const mapZoom = 10;
   const [selectedCity, setSelectedCity] = useState("Metro Manila");
   const [selectedDate, setSelectedDate] = useState(
@@ -23,6 +27,9 @@ const Index = () => {
     "ghsl_built",
     "worldpop_population",
   ]);
+
+  const indicators = useIndicatorData(selectedCity);
+  const { weather, loading: weatherLoading } = useWeatherData(selectedCity);
 
   const handleLayerToggle = (layer: string) => {
     setActiveLayers(prev =>
@@ -45,6 +52,25 @@ const Index = () => {
     )
   ).join(" · ");
 
+  const handleDownloadReport = () => {
+    const layerNames = activeLayers.map(id => LAYER_CATALOG[id]?.name || id);
+    const reportContent = generateReport({
+      city: selectedCity,
+      date: selectedDate,
+      activeLayers: layerNames,
+      indicators,
+      weather: weather || undefined
+    });
+    
+    const filename = `${selectedCity.replace(/\s+/g, '_')}_Report_${selectedDate}.txt`;
+    downloadReport(reportContent, filename);
+    
+    toast({
+      title: "Report Downloaded",
+      description: `Environmental report for ${selectedCity} has been generated.`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -66,43 +92,55 @@ const Index = () => {
               <h3 className="text-sm font-semibold text-muted-foreground">Key Indicators</h3>
               <IndicatorCard
                 title="Heat Exposure"
-                value="8.2M"
-                description="Population in UHI zones"
+                value={indicators.heatExposure.value}
+                description={indicators.heatExposure.description}
                 icon={Thermometer}
-                trend="up"
+                trend={indicators.heatExposure.trend}
               />
               <IndicatorCard
                 title="Greenspace Access"
-                value="42%"
-                description="Within 500m of parks"
+                value={indicators.greenspace.value}
+                description={indicators.greenspace.description}
                 icon={Trees}
-                trend="down"
+                trend={indicators.greenspace.trend}
               />
               <IndicatorCard
                 title="Flood Risk"
-                value="High"
-                description="Last 24h precipitation"
+                value={indicators.floodRisk.value}
+                description={indicators.floodRisk.description}
                 icon={Droplets}
-                trend="up"
+                trend={indicators.floodRisk.trend}
               />
               <IndicatorCard
                 title="Population Density"
-                value="24.5K"
-                description="Per sq km average"
+                value={indicators.population.value}
+                description={indicators.population.description}
                 icon={Users}
-                trend="neutral"
+                trend={indicators.population.trend}
               />
+              <IndicatorCard
+                title="Air Quality"
+                value={indicators.airQuality.value}
+                description={indicators.airQuality.description}
+                icon={Wind}
+                trend={indicators.airQuality.trend}
+              />
+              {weather && (
+                <IndicatorCard
+                  title="Weather"
+                  value={`${weather.temperature}°C`}
+                  description={weather.description}
+                  icon={CloudRain}
+                  trend="neutral"
+                />
+              )}
             </div>
 
-            <ApiCallPanel
-              center={cityCoords}
-              selectedCity={selectedCity}
-              selectedDate={selectedDate}
-              zoom={mapZoom}
-              activeLayers={activeLayers}
-            />
-
-            <Button className="w-full gap-2" variant="outline">
+            <Button 
+              className="w-full gap-2" 
+              variant="outline"
+              onClick={handleDownloadReport}
+            >
               <Download className="w-4 h-4" />
               Export Report
             </Button>
