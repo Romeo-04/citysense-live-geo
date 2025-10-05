@@ -58,6 +58,7 @@ const Index = () => {
       city: selectedCity,
       date: selectedDate,
       activeLayers: layerNames,
+      layerIds: activeLayers,
       indicators,
       weather: weather || undefined
     });
@@ -70,6 +71,8 @@ const Index = () => {
       description: `Environmental report for ${selectedCity} has been generated.`,
     });
   };
+
+  // Insights/pins removed per user request
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

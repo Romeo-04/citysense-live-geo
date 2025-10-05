@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SORTED_LAYER_LIST } from "@/lib/layer-catalog";
-import Assistant from "@/components/Assistant";
 import { DEFAULT_CITIES } from "@/lib/cities";
 
 interface ControlPanelProps {
@@ -105,9 +104,7 @@ const ControlPanel = ({
         </div>
       </Card>
 
-      <Card className="p-4 bg-gradient-to-br from-card to-card/80 backdrop-blur border-border/50">
-        <Assistant />
-      </Card>
+      {/* Assistant removed temporarily */}
     </div>
   );
 };

@@ -71,6 +71,8 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
 
+    // insights/pins removed
+
     // Remove layers that are no longer active
     Object.keys(layersRef.current).forEach(key => {
       if (!activeLayers.includes(key)) {
