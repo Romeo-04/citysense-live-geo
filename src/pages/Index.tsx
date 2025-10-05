@@ -93,13 +93,6 @@ const Index = () => {
               />
             </div>
 
-            <ApiCallPanel
-              center={cityCoords}
-              selectedCity={selectedCity}
-              selectedDate={selectedDate}
-              zoom={mapZoom}
-            />
-
             <Button className="w-full gap-2" variant="outline">
               <Download className="w-4 h-4" />
               Export Report

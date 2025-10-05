@@ -135,14 +135,14 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
 
         if (existingLayer && existingLayer instanceof L.TileLayer.WMS) {
           existingLayer.setOpacity(wmsParams.opacity ?? 1);
-          const params: Record<string, any> = {
+          const params: L.WMSParams = {
             layers: layerName,
             styles: config.wms.style ?? '',
             format: config.wms.format ?? 'image/png',
             transparent: config.wms.transparent ?? true,
           };
           if (config.wms.timeEnabled) {
-            params.time = selectedDate;
+            (params as any).time = selectedDate;
           }
           existingLayer.setParams(params);
           if (config.zIndex) {
