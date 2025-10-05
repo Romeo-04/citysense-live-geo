@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { buildGIBSTileURL, GIBS_LAYERS } from "@/lib/nasa-api";
+import { buildGIBSTileURL, GIBS_LAYERS, resolveGIBSTileURL } from "@/lib/nasa-api";
 import { LAYER_CATALOG } from "@/lib/layer-catalog";
 import { buildWorldPopLayerName, getCityCountryISO } from "@/lib/worldpop-api";
 
@@ -38,7 +38,24 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
 
     mapInstanceRef.current = map;
 
+    let resizeObserver: ResizeObserver | undefined;
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        requestAnimationFrame(() => {
+          map.invalidateSize();
+        });
+      });
+
+      resizeObserver.observe(mapRef.current);
+    }
+
+    map.whenReady(() => {
+      map.invalidateSize();
+    });
+
     return () => {
+      resizeObserver?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
       layersRef.current = {};
@@ -53,6 +70,8 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
+
+    // insights/pins removed
 
     // Remove layers that are no longer active
     Object.keys(layersRef.current).forEach(key => {
@@ -75,13 +94,20 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
       if (config.type === 'nasa-gibs' && config.gibsLayerKey) {
         const gibsConfig = GIBS_LAYERS[config.gibsLayerKey];
         try {
-          const tileUrl = buildGIBSTileURL(config.gibsLayerKey, selectedDate);
-          const layerOptions: L.TileLayerOptions = {
+          // Resolve a capability-backed tile URL (may fetch capabilities once and cache)
+          resolveGIBSTileURL(config.gibsLayerKey, selectedDate)
+            .then(tileUrl => {
+              // Log the resolved URL for debugging (Leaflet will substitute {z}/{x}/{y})
+              console.debug(`GIBS resolved URL for ${config.gibsLayerKey}:`, tileUrl);
+              // Use the map's max zoom as a fallback so layers remain visible when the user zooms in
+              const mapMaxZoom = map.getMaxZoom ? map.getMaxZoom() : undefined;
+              const layerOptions: L.TileLayerOptions = {
             tileSize: 256,
             opacity: config.defaultOpacity ?? 0.7,
             attribution: `© ${config.provider}`,
             minZoom: gibsConfig.minZoom,
-            maxZoom: gibsConfig.maxZoom,
+            // allow display up to the map's max zoom; keep maxNativeZoom to avoid requesting unsupported tiles
+            maxZoom: mapMaxZoom ?? gibsConfig.maxZoom,
             maxNativeZoom: gibsConfig.maxNativeZoom,
             crossOrigin: true,
           };
@@ -102,6 +128,25 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           }
           gibsLayer.addTo(map);
           layersRef.current[layerKey] = gibsLayer;
+              if (existingLayer && existingLayer instanceof L.TileLayer) {
+                existingLayer.setUrl(tileUrl);
+                existingLayer.setOpacity(layerOptions.opacity ?? 1);
+                if (config.zIndex) {
+                  existingLayer.setZIndex(config.zIndex);
+                }
+                return;
+              }
+
+              const gibsLayer = L.tileLayer(tileUrl, layerOptions);
+              if (config.zIndex) {
+                gibsLayer.setZIndex(config.zIndex);
+              }
+              gibsLayer.addTo(map);
+              layersRef.current[layerKey] = gibsLayer;
+            })
+            .catch(error => {
+              console.error(`Failed to resolve/load GIBS layer ${layerKey}:`, error);
+            });
         } catch (error) {
           console.error(`Failed to load GIBS layer ${layerKey}:`, error);
         }
@@ -120,6 +165,13 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           attribution: `© ${config.provider}`,
           crossOrigin: true,
         };
+        // Ensure WMS layers remain visible when zooming beyond the declared maxZoom by
+        // falling back to the map's configured max zoom when available.
+        if (map.getMaxZoom) {
+          (wmsParams as any).maxZoom = config.wms.maxZoom ?? map.getMaxZoom();
+        } else if (config.wms.maxZoom !== undefined) {
+          (wmsParams as any).maxZoom = config.wms.maxZoom;
+        }
 
         if (config.wms.timeEnabled) {
           (wmsParams as any).time = selectedDate;
@@ -170,7 +222,8 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           opacity: config.defaultOpacity ?? 0.7,
           attribution: `© ${config.provider}`,
           minZoom: config.xyz.minZoom,
-          maxZoom: config.xyz.maxZoom,
+          // allow XYZ layers to remain visible at high zoom when map supports it
+          maxZoom: map.getMaxZoom ? (config.xyz.maxZoom ?? map.getMaxZoom()) : config.xyz.maxZoom,
           crossOrigin: true,
         };
 

@@ -1,9 +1,12 @@
 import { IndicatorData } from "@/hooks/useIndicatorData";
+import { LAYER_CATALOG } from './layer-catalog';
 
 export interface ReportData {
   city: string;
   date: string;
   activeLayers: string[];
+  /** optional: layer ids (keys) corresponding to the activeLayers names */
+  layerIds?: string[];
   indicators: IndicatorData;
   weather?: {
     temperature: number;
@@ -15,7 +18,29 @@ export interface ReportData {
 }
 
 export const generateReport = (data: ReportData): string => {
-  const { city, date, activeLayers, indicators, weather } = data;
+  const { city, date, activeLayers, layerIds, indicators, weather } = data;
+
+  // Resolve layer keys: prefer explicit layerIds, otherwise try to match by display name
+  const layerKeys = (layerIds && layerIds.length)
+    ? layerIds
+    : activeLayers.map(name => {
+        const found = Object.entries(LAYER_CATALOG).find(([, cfg]) => cfg.name === name);
+        return found ? found[0] : name;
+      });
+
+  const layerInfo: Record<string, string> = {
+    'lst': 'Land Surface Temperature (LST)\n   - Resolution: 1km\n   - Provider: NASA MODIS\n   - Updates: Daily\n   - Use: Urban heat island analysis',
+    'ndvi': 'Normalized Difference Vegetation Index (NDVI)\n   - Resolution: 250m\n   - Provider: NASA MODIS\n   - Updates: Daily\n   - Use: Vegetation health monitoring',
+    'precipitation': 'Precipitation Data\n   - Resolution: 0.1°\n   - Provider: NASA GPM\n   - Updates: 3-hourly\n   - Use: Rainfall and flood risk assessment',
+    'aod': 'Aerosol Optical Depth (AOD)\n   - Resolution: 1km\n   - Provider: NASA MODIS\n   - Updates: Daily\n   - Use: Air quality monitoring',
+    'no2': 'Nitrogen Dioxide (NO2)\n   - Resolution: 13km\n   - Provider: NASA OMI\n   - Updates: Daily\n   - Use: Pollution tracking',
+    'nightlights': 'Nighttime Lights\n   - Resolution: 500m\n   - Provider: NASA VIIRS\n   - Updates: Daily\n   - Use: Urbanization and economic activity',
+    'sedac_flood': 'Flood Hazard Zones\n   - Provider: NASA SEDAC\n   - Use: Disaster risk assessment',
+    'ghsl_built': 'Built-up Areas\n   - Resolution: 10m\n   - Provider: ESA GHSL\n   - Use: Urban expansion monitoring',
+    'worldpop_population': 'Population Distribution\n   - Resolution: 1km\n   - Provider: WorldPop\n   - Use: Demographic analysis'
+  };
+
+  const layerCapabilitiesStr = layerKeys.map(k => layerInfo[k] || `${k}\n   - Information not available`).join('\n\n');
   
   const reportContent = `
 CITY ENVIRONMENTAL DATA REPORT
@@ -82,20 +107,7 @@ DATA SOURCES
 
 LAYER CAPABILITIES
 --------------------------------------------------------------------------------
-${activeLayers.map(layer => {
-  const layerInfo: Record<string, string> = {
-    'lst': 'Land Surface Temperature (LST)\n   - Resolution: 1km\n   - Provider: NASA MODIS\n   - Updates: Daily\n   - Use: Urban heat island analysis',
-    'ndvi': 'Normalized Difference Vegetation Index (NDVI)\n   - Resolution: 250m\n   - Provider: NASA MODIS\n   - Updates: Daily\n   - Use: Vegetation health monitoring',
-    'precipitation': 'Precipitation Data\n   - Resolution: 0.1°\n   - Provider: NASA GPM\n   - Updates: 3-hourly\n   - Use: Rainfall and flood risk assessment',
-    'aod': 'Aerosol Optical Depth (AOD)\n   - Resolution: 1km\n   - Provider: NASA MODIS\n   - Updates: Daily\n   - Use: Air quality monitoring',
-    'no2': 'Nitrogen Dioxide (NO2)\n   - Resolution: 13km\n   - Provider: NASA OMI\n   - Updates: Daily\n   - Use: Pollution tracking',
-    'nightlights': 'Nighttime Lights\n   - Resolution: 500m\n   - Provider: NASA VIIRS\n   - Updates: Daily\n   - Use: Urbanization and economic activity',
-    'sedac_flood': 'Flood Hazard Zones\n   - Provider: NASA SEDAC\n   - Use: Disaster risk assessment',
-    'ghsl_built': 'Built-up Areas\n   - Resolution: 10m\n   - Provider: ESA GHSL\n   - Use: Urban expansion monitoring',
-    'worldpop_population': 'Population Distribution\n   - Resolution: 1km\n   - Provider: WorldPop\n   - Use: Demographic analysis'
-  };
-  return layerInfo[layer] || `${layer}\n   - Information not available`;
-}).join('\n\n')}
+${layerCapabilitiesStr}
 
 ANALYSIS SUMMARY
 --------------------------------------------------------------------------------
