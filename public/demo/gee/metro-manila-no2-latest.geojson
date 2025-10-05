@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Ave Interchange",
+        "value": 0.00045,
+        "unit": "mol/m²",
+        "narrative": "School cluster reports elevated NO₂ during dismissal.",
+        "source": "Sentinel-5P NO₂ (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.04, 14.65]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "NAIA Run-up",
+        "value": 0.00038,
+        "unit": "mol/m²",
+        "narrative": "Aircraft ground operations spike nitrogen dioxide.",
+        "source": "Sentinel-5P NO₂ (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.00, 14.51]
+      }
+    }
+  ]
+}

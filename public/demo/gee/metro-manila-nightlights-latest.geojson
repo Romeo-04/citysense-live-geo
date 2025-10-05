@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Makati CBD",
+        "value": 19,
+        "unit": "nW/cm²/sr",
+        "narrative": "Financial district nightlife keeps radiance high.",
+        "source": "VIIRS DNB (demo)",
+        "sourceDate": "2025-04-07"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.02, 14.55]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BGC Skyline",
+        "value": 22,
+        "unit": "nW/cm²/sr",
+        "narrative": "Mixed-use towers drive strong night lights footprint.",
+        "source": "VIIRS DNB (demo)",
+        "sourceDate": "2025-04-07"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.05, 14.54]
+      }
+    }
+  ]
+}
