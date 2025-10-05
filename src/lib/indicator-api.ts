@@ -11,6 +11,8 @@ async function getFeatureInfo(
   width: number = 1024,
   height: number = 1024
 ) {
+  // For GetFeatureInfo the parameter to request JSON is 'info_format' (not 'format').
+  // Some servers are strict about WMS version and expect 'crs' vs 'srs' for 1.3.0.
   const params = new URLSearchParams({
     service: "WMS",
     version: "1.1.1",
@@ -22,21 +24,31 @@ async function getFeatureInfo(
     feature_count: "1",
     height: height.toString(),
     width: width.toString(),
-    format: "application/json",
+    info_format: "application/json",
     srs: "EPSG:4326",
-    x: (width / 2).toString(),
-    y: (height / 2).toString(),
+    x: Math.floor(width / 2).toString(),
+    y: Math.floor(height / 2).toString(),
   });
 
   const url = `${baseUrl}?${params.toString()}`;
 
   try {
-    const response = await fetch(url);
+    let response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`GetFeatureInfo request failed: ${response.statusText}`);
+      // Try a fallback with WMS 1.3.0 parameter naming (use 'crs' instead of 'srs')
+      const params13 = new URLSearchParams(params as any);
+      params13.set('version', '1.3.0');
+      params13.delete('srs');
+      params13.set('crs', 'EPSG:4326');
+      const url13 = `${baseUrl}?${params13.toString()}`;
+      response = await fetch(url13);
+      if (!response.ok) {
+        throw new Error(`GetFeatureInfo request failed: ${response.statusText}`);
+      }
     }
+
     const data = await response.json();
-    // The value is often in properties.GRAY_INDEX or similar
+    // The queried value is often present under properties (e.g., GRAY_INDEX)
     return data.features?.[0]?.properties ?? null;
   } catch (error) {
     console.error(`Error fetching feature info for ${layerName}:`, error);
