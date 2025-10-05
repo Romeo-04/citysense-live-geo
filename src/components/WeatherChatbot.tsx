@@ -34,14 +34,21 @@ const roleLabel: Record<string, string> = {
   user: "You",
 };
 
-export const WeatherChatbot = ({ city, weather, loading }: WeatherChatbotProps) => {
+export const WeatherChatbot = ({
+  city,
+  weather,
+  loading,
+}: WeatherChatbotProps) => {
   const { toast } = useToast();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([{
-    id: "welcome",
-    role: "assistant",
-    content: "Hi! I'm your CitySense weather assistant. Ask me anything about current conditions, comfort levels, or planning activities in your city.",
-  }]);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content:
+        "Hi! I'm your CitySense weather assistant. Ask me anything about current conditions, comfort levels, or planning activities in your city.",
+    },
+  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
 
@@ -80,17 +87,22 @@ export const WeatherChatbot = ({ city, weather, loading }: WeatherChatbotProps) 
     setIsSubmitting(true);
 
     try {
-      const historyForApi = nextMessages.filter(message => message.id !== "welcome");
+      const historyForApi = nextMessages.filter(
+        (message) => message.id !== "welcome"
+      );
       const { message } = await callDeepseekWeatherChat({
         messages: historyForApi,
         weatherContext,
       });
-      setMessages(prev => [...prev, message]);
+      setMessages((prev) => [...prev, message]);
     } catch (error) {
       console.error(error);
       toast({
         title: "Weather assistant unavailable",
-        description: error instanceof Error ? error.message : "Unable to reach DeepSeek right now.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Unable to reach DeepSeek right now.",
         variant: "destructive",
       });
     } finally {
@@ -113,7 +125,10 @@ export const WeatherChatbot = ({ city, weather, loading }: WeatherChatbotProps) 
           Weather AI Assistant
         </Button>
       </SheetTrigger>
-  <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto z-[2002]">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-lg overflow-y-auto z-[2002]"
+      >
         <SheetHeader>
           <SheetTitle>Weather AI Assistant</SheetTitle>
           <SheetDescription>
@@ -135,14 +150,16 @@ export const WeatherChatbot = ({ city, weather, loading }: WeatherChatbotProps) 
                   className={cn(
                     "rounded-lg px-3 py-2",
                     message.role === "assistant"
-                      ? "bg-primary/10 text-primary-foreground"
+                      ? "bg-primary/10 text-foreground"
                       : "bg-muted text-foreground"
                   )}
                 >
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
                     {roleLabel[message.role] ?? message.role}
                   </p>
-                  <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed">
+                    {message.content}
+                  </p>
                 </div>
               ))}
               <div ref={endRef} />
@@ -159,7 +176,12 @@ export const WeatherChatbot = ({ city, weather, loading }: WeatherChatbotProps) 
               disabled={isSubmitting}
             />
             <div className="flex justify-end">
-              <Button onClick={handleSubmit} disabled={isSubmitting || !input.trim()} size="sm" className="gap-2">
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !input.trim()}
+                size="sm"
+                className="gap-2"
+              >
                 <Send className="h-4 w-4" />
                 Send
               </Button>
@@ -167,7 +189,7 @@ export const WeatherChatbot = ({ city, weather, loading }: WeatherChatbotProps) 
           </div>
 
           <p className="text-[11px] text-muted-foreground text-center">
-            Powered by DeepSeek R1 with live Open-Meteo conditions.
+            Powered by AI with live Open-Meteo conditions.
           </p>
         </div>
       </SheetContent>
