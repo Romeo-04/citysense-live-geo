@@ -99,12 +99,15 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
             .then(tileUrl => {
               // Log the resolved URL for debugging (Leaflet will substitute {z}/{x}/{y})
               console.debug(`GIBS resolved URL for ${config.gibsLayerKey}:`, tileUrl);
+              // Use the map's max zoom as a fallback so layers remain visible when the user zooms in
+              const mapMaxZoom = map.getMaxZoom ? map.getMaxZoom() : undefined;
               const layerOptions: L.TileLayerOptions = {
             tileSize: 256,
             opacity: config.defaultOpacity ?? 0.7,
             attribution: `© ${config.provider}`,
             minZoom: gibsConfig.minZoom,
-            maxZoom: gibsConfig.maxZoom,
+            // allow display up to the map's max zoom; keep maxNativeZoom to avoid requesting unsupported tiles
+            maxZoom: mapMaxZoom ?? gibsConfig.maxZoom,
             maxNativeZoom: gibsConfig.maxNativeZoom,
             crossOrigin: true,
           };
@@ -145,6 +148,13 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           attribution: `© ${config.provider}`,
           crossOrigin: true,
         };
+        // Ensure WMS layers remain visible when zooming beyond the declared maxZoom by
+        // falling back to the map's configured max zoom when available.
+        if (map.getMaxZoom) {
+          (wmsParams as any).maxZoom = config.wms.maxZoom ?? map.getMaxZoom();
+        } else if (config.wms.maxZoom !== undefined) {
+          (wmsParams as any).maxZoom = config.wms.maxZoom;
+        }
 
         if (config.wms.timeEnabled) {
           (wmsParams as any).time = selectedDate;
@@ -188,7 +198,8 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           opacity: config.defaultOpacity ?? 0.7,
           attribution: `© ${config.provider}`,
           minZoom: config.xyz.minZoom,
-          maxZoom: config.xyz.maxZoom,
+          // allow XYZ layers to remain visible at high zoom when map supports it
+          maxZoom: map.getMaxZoom ? (config.xyz.maxZoom ?? map.getMaxZoom()) : config.xyz.maxZoom,
           crossOrigin: true,
         };
 
