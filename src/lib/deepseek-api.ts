@@ -20,8 +20,14 @@ export interface WeatherChatResponse {
 const DEFAULT_MODEL = "deepseek-reasoner";
 const DEEPSEEK_DEFAULT_API_URL = "https://api.deepseek.com/v1/chat/completions";
 const OPENAI_DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions";
+const OPENROUTER_DEFAULT_API_URL =
+  "https://openrouter.ai/api/v1/chat/completions";
 
-const buildPayload = (messages: ChatMessage[], weatherContext?: string) => {
+const buildPayload = (
+  messages: ChatMessage[],
+  weatherContext?: string,
+  isOpenRouter: boolean = false
+) => {
   const systemPrompt =
     "You are CitySense's friendly urban weather guide. Use the provided weather context to answer user questions with actionable, concise insights. Include key metrics (temperature, humidity, wind) when available, and highlight safety considerations for outdoor activities. If data is missing, be transparent and offer alternatives.";
 
@@ -29,10 +35,16 @@ const buildPayload = (messages: ChatMessage[], weatherContext?: string) => {
     ? `\nCurrent weather context:\n${weatherContext}`
     : "";
 
-  const normalisedMessages = messages.map(({ role, content }) => ({ role, content }));
+  const normalisedMessages = messages.map(({ role, content }) => ({
+    role,
+    content,
+  }));
+
+  // For OpenRouter, use a compatible model name
+  const defaultModel = isOpenRouter ? "deepseek/deepseek-chat" : DEFAULT_MODEL;
 
   return {
-    model: import.meta.env.VITE_DEEPSEEK_MODEL ?? DEFAULT_MODEL,
+    model: import.meta.env.VITE_DEEPSEEK_MODEL ?? defaultModel,
     messages: [
       {
         role: "system",
@@ -52,37 +64,73 @@ export async function callDeepseekWeatherChat({
 }: WeatherChatRequest): Promise<WeatherChatResponse> {
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
   if (!apiKey) {
-    throw new Error("Missing DeepSeek API key. Set VITE_DEEPSEEK_API_KEY in your environment.");
+    throw new Error(
+      "Missing DeepSeek API key. Set VITE_DEEPSEEK_API_KEY in your environment."
+    );
   }
 
-  // Choose API URL: explicit env override > guess based on key shape (OpenAI) > DeepSeek default
+  // Detect if this is an OpenRouter key
+  const isOpenRouterKey =
+    apiKey && typeof apiKey === "string" && apiKey.startsWith("sk-or-v1-");
+
+  // Choose API URL: explicit env override > detect based on key > DeepSeek default
   const envUrl = import.meta.env.VITE_DEEPSEEK_API_URL;
   let apiUrl = envUrl ?? DEEPSEEK_DEFAULT_API_URL;
-  if (!envUrl && apiKey && typeof apiKey === "string" && apiKey.startsWith("sk-")) {
-    // Looks like an OpenAI-style key; prefer OpenAI endpoint for compatibility
-    apiUrl = OPENAI_DEFAULT_API_URL;
+
+  if (!envUrl) {
+    if (isOpenRouterKey) {
+      apiUrl = OPENROUTER_DEFAULT_API_URL;
+    } else if (
+      apiKey &&
+      typeof apiKey === "string" &&
+      apiKey.startsWith("sk-")
+    ) {
+      // Looks like an OpenAI-style key; prefer OpenAI endpoint for compatibility
+      apiUrl = OPENAI_DEFAULT_API_URL;
+    }
   }
-  const payload = buildPayload(messages, weatherContext);
+
+  const payload = buildPayload(
+    messages,
+    weatherContext,
+    isOpenRouterKey || apiUrl === OPENROUTER_DEFAULT_API_URL
+  );
+
+  // Build headers - OpenRouter requires additional headers
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiKey}`,
+  };
+
+  // Add OpenRouter-specific headers for better routing and tracking
+  if (isOpenRouterKey || apiUrl === OPENROUTER_DEFAULT_API_URL) {
+    headers["HTTP-Referer"] = window.location.origin;
+    headers["X-Title"] = "CitySense Weather Assistant";
+  }
 
   let response: Response;
   try {
     response = await fetch(apiUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify(payload),
       signal,
     });
   } catch (err) {
     // Likely a network or CORS failure
-    throw new Error(`Network request to DeepSeek/OpenAI failed: ${err instanceof Error ? err.message : String(err)}. Target URL: ${apiUrl}`);
+    throw new Error(
+      `Network request failed: ${
+        err instanceof Error ? err.message : String(err)
+      }. Target URL: ${apiUrl}`
+    );
   }
 
   // If auth failed (common when using a key against the wrong provider), try the alternate endpoint once
-  if (!response.ok && response.status === 401) {
-    const alternateUrl = apiUrl === OPENAI_DEFAULT_API_URL ? DEEPSEEK_DEFAULT_API_URL : OPENAI_DEFAULT_API_URL;
+  if (!response.ok && response.status === 401 && !isOpenRouterKey) {
+    const alternateUrl =
+      apiUrl === OPENAI_DEFAULT_API_URL
+        ? DEEPSEEK_DEFAULT_API_URL
+        : OPENAI_DEFAULT_API_URL;
     try {
       const altResp = await fetch(alternateUrl, {
         method: "POST",
@@ -98,11 +146,17 @@ export async function callDeepseekWeatherChat({
         response = altResp;
       } else {
         const errText = await altResp.text();
-        throw new Error(`Alternate endpoint ${alternateUrl} returned ${altResp.status} ${altResp.statusText}: ${errText}`);
+        throw new Error(
+          `Alternate endpoint ${alternateUrl} returned ${altResp.status} ${altResp.statusText}: ${errText}`
+        );
       }
     } catch (altErr) {
       const primaryText = await response.text().catch(() => "<unreadable>");
-      throw new Error(`Authentication failed when calling ${apiUrl} (401). Tried alternate ${alternateUrl} and it also failed. Primary response: ${primaryText}. Alternate error: ${altErr instanceof Error ? altErr.message : String(altErr)}. Ensure the API key matches the provider (DeepSeek vs OpenAI) and that CORS/proxy is configured.`);
+      throw new Error(
+        `Authentication failed when calling ${apiUrl} (401). Tried alternate ${alternateUrl} and it also failed. Primary response: ${primaryText}. Alternate error: ${
+          altErr instanceof Error ? altErr.message : String(altErr)
+        }. Ensure the API key matches the provider (DeepSeek vs OpenAI) and that CORS/proxy is configured.`
+      );
     }
   }
 
@@ -115,7 +169,11 @@ export async function callDeepseekWeatherChat({
     } catch {
       parsed = errorText;
     }
-    throw new Error(`DeepSeek/OpenAI API error: ${response.status} ${response.statusText}. ${hint} Response: ${JSON.stringify(parsed).slice(0,2000)}`);
+    throw new Error(
+      `API error (${response.status} ${
+        response.statusText
+      }): ${hint} ${JSON.stringify(parsed).slice(0, 2000)}`
+    );
   }
 
   const data = (await response.json()) as any;
@@ -147,12 +205,17 @@ export async function callDeepseekWeatherChat({
     if (!content) {
       // As a fallback, stringify the response for debugging in the error message
       const snippet = JSON.stringify(data).slice(0, 2000);
-      throw new Error(`DeepSeek API returned an unexpected response format. Response start: ${snippet}`);
+      throw new Error(
+        `DeepSeek API returned an unexpected response format. Response start: ${snippet}`
+      );
     }
 
     return {
       message: {
-        id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2),
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2),
         role: (role as any) ?? "assistant",
         content: content as string,
       },
@@ -167,6 +230,10 @@ export async function callDeepseekWeatherChat({
         return String(data);
       }
     })();
-    throw new Error(`Failed to parse DeepSeek response: ${err instanceof Error ? err.message : String(err)}\nResponse preview: ${preview}`);
+    throw new Error(
+      `Failed to parse DeepSeek response: ${
+        err instanceof Error ? err.message : String(err)
+      }\nResponse preview: ${preview}`
+    );
   }
 }
