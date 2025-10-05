@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { buildGIBSTileURL, GIBS_LAYERS } from "@/lib/nasa-api";
+import { buildGIBSTileURL, GIBS_LAYERS, resolveGIBSTileURL } from "@/lib/nasa-api";
 import { LAYER_CATALOG } from "@/lib/layer-catalog";
 import { buildWorldPopLayerName, getCityCountryISO } from "@/lib/worldpop-api";
 
@@ -75,8 +75,12 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
       if (config.type === 'nasa-gibs' && config.gibsLayerKey) {
         const gibsConfig = GIBS_LAYERS[config.gibsLayerKey];
         try {
-          const tileUrl = buildGIBSTileURL(config.gibsLayerKey, selectedDate);
-          const layerOptions: L.TileLayerOptions = {
+          // Resolve a capability-backed tile URL (may fetch capabilities once and cache)
+          resolveGIBSTileURL(config.gibsLayerKey, selectedDate)
+            .then(tileUrl => {
+              // Log the resolved URL for debugging (Leaflet will substitute {z}/{x}/{y})
+              console.debug(`GIBS resolved URL for ${config.gibsLayerKey}:`, tileUrl);
+              const layerOptions: L.TileLayerOptions = {
             tileSize: 256,
             opacity: config.defaultOpacity ?? 0.7,
             attribution: `© ${config.provider}`,
@@ -85,22 +89,25 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
             maxNativeZoom: gibsConfig.maxNativeZoom,
             crossOrigin: true,
           };
+              if (existingLayer && existingLayer instanceof L.TileLayer) {
+                existingLayer.setUrl(tileUrl);
+                existingLayer.setOpacity(layerOptions.opacity ?? 1);
+                if (config.zIndex) {
+                  existingLayer.setZIndex(config.zIndex);
+                }
+                return;
+              }
 
-          if (existingLayer && existingLayer instanceof L.TileLayer) {
-            existingLayer.setUrl(tileUrl);
-            existingLayer.setOpacity(layerOptions.opacity ?? 1);
-            if (config.zIndex) {
-              existingLayer.setZIndex(config.zIndex);
-            }
-            return;
-          }
-
-          const gibsLayer = L.tileLayer(tileUrl, layerOptions);
-          if (config.zIndex) {
-            gibsLayer.setZIndex(config.zIndex);
-          }
-          gibsLayer.addTo(map);
-          layersRef.current[layerKey] = gibsLayer;
+              const gibsLayer = L.tileLayer(tileUrl, layerOptions);
+              if (config.zIndex) {
+                gibsLayer.setZIndex(config.zIndex);
+              }
+              gibsLayer.addTo(map);
+              layersRef.current[layerKey] = gibsLayer;
+            })
+            .catch(error => {
+              console.error(`Failed to resolve/load GIBS layer ${layerKey}:`, error);
+            });
         } catch (error) {
           console.error(`Failed to load GIBS layer ${layerKey}:`, error);
         }
