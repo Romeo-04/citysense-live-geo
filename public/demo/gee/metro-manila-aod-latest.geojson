@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "EDSA Traffic Spine",
+        "value": 1.3,
+        "unit": "AOD",
+        "narrative": "Morning rush-hour plume elevates fine particulates.",
+        "source": "Sentinel-5P Aerosol (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [121.03, 14.55]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Port Area Stack",
+        "value": 0.9,
+        "unit": "AOD",
+        "narrative": "Container yard dust mixes with ship exhaust.",
+        "source": "Sentinel-5P Aerosol (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [120.96, 14.59]
+      }
+    }
+  ]
+}

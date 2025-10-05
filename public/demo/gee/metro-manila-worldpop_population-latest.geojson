@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Tondo Cluster",
+        "value": 42000,
+        "unit": "people/km²",
+        "narrative": "Densest barangays with limited park access.",
+        "source": "WorldPop (demo)",
+        "sourceDate": "2020"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [120.96, 14.60],
+            [121.01, 14.60],
+            [121.01, 14.65],
+            [120.96, 14.65],
+            [120.96, 14.60]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Dasmariñas-Village Edge",
+        "value": 18000,
+        "unit": "people/km²",
+        "narrative": "Medium-density neighborhoods buffered by private greens.",
+        "source": "WorldPop (demo)",
+        "sourceDate": "2020"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.02, 14.52],
+            [121.07, 14.52],
+            [121.07, 14.57],
+            [121.02, 14.57],
+            [121.02, 14.52]
+          ]
+        ]
+      }
+    }
+  ]
+}

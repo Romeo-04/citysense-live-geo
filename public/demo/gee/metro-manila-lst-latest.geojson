@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Quezon City Heat Ridge",
+        "value": 38.5,
+        "unit": "°C",
+        "narrative": "Dense built-up districts retain heat late into the evening.",
+        "source": "MODIS LST (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.00, 14.65],
+            [121.10, 14.65],
+            [121.10, 14.75],
+            [121.00, 14.75],
+            [121.00, 14.65]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pasig River Corridor",
+        "value": 36.8,
+        "unit": "°C",
+        "narrative": "Mixed industrial waterfront shows persistent heat island signature.",
+        "source": "MODIS LST (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [120.95, 14.55],
+            [121.05, 14.55],
+            [121.05, 14.65],
+            [120.95, 14.65],
+            [120.95, 14.55]
+          ]
+        ]
+      }
+    }
+  ]
+}
