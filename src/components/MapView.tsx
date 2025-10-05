@@ -38,7 +38,24 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
 
     mapInstanceRef.current = map;
 
+    let resizeObserver: ResizeObserver | undefined;
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        requestAnimationFrame(() => {
+          map.invalidateSize();
+        });
+      });
+
+      resizeObserver.observe(mapRef.current);
+    }
+
+    map.whenReady(() => {
+      map.invalidateSize();
+    });
+
     return () => {
+      resizeObserver?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
       layersRef.current = {};
