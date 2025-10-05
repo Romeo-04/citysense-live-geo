@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Quezon Basin Downpour",
+        "value": 142,
+        "unit": "mm/24h",
+        "narrative": "Convective burst concentrates runoff along the Marikina River.",
+        "source": "GPM IMERG (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.06, 14.62],
+            [121.16, 14.62],
+            [121.16, 14.72],
+            [121.06, 14.72],
+            [121.06, 14.62]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Laguna de Bay Fringe",
+        "value": 95,
+        "unit": "mm/24h",
+        "narrative": "Shoreline barangays report ankle-deep flooding.",
+        "source": "GPM IMERG (demo)",
+        "sourceDate": "2025-04-09"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.18, 14.38],
+            [121.28, 14.38],
+            [121.28, 14.48],
+            [121.18, 14.48],
+            [121.18, 14.38]
+          ]
+        ]
+      }
+    }
+  ]
+}
