@@ -60,6 +60,9 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
       mapInstanceRef.current = null;
       layersRef.current = {};
     };
+    // We intentionally only run this once on mount/unmount. The map instance
+    // should persist across center/zoom updates which are handled separately.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -102,45 +105,26 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
               // Use the map's max zoom as a fallback so layers remain visible when the user zooms in
               const mapMaxZoom = map.getMaxZoom ? map.getMaxZoom() : undefined;
               const layerOptions: L.TileLayerOptions = {
-            tileSize: 256,
-            opacity: config.defaultOpacity ?? 0.7,
-            attribution: `© ${config.provider}`,
-            minZoom: gibsConfig.minZoom,
-            // allow display up to the map's max zoom; keep maxNativeZoom to avoid requesting unsupported tiles
-            maxZoom: mapMaxZoom ?? gibsConfig.maxZoom,
-            maxNativeZoom: gibsConfig.maxNativeZoom,
-            crossOrigin: true,
-          };
+                tileSize: 256,
+                opacity: config.defaultOpacity ?? 0.7,
+                attribution: `© ${config.provider}`,
+                minZoom: gibsConfig.minZoom,
+                // allow display up to the map's max zoom; keep maxNativeZoom to avoid requesting unsupported tiles
+                maxZoom: mapMaxZoom ?? gibsConfig.maxZoom,
+                maxNativeZoom: gibsConfig.maxNativeZoom,
+                crossOrigin: true,
+              };
 
-          if (existingLayer && existingLayer instanceof L.TileLayer) {
-            const el = existingLayer as any;
-            el.setUrl(tileUrl);
-            el.setOpacity(layerOptions.opacity ?? 1);
-            if (config.zIndex) {
-              el.setZIndex(config.zIndex);
-            }
-            return;
-          }
-
-          const gibsLayer = L.tileLayer(tileUrl, layerOptions);
-          if (config.zIndex) {
-            gibsLayer.setZIndex(config.zIndex);
-          }
-          gibsLayer.addTo(map);
-          layersRef.current[layerKey] = gibsLayer;
               if (existingLayer && existingLayer instanceof L.TileLayer) {
-                existingLayer.setUrl(tileUrl);
-                existingLayer.setOpacity(layerOptions.opacity ?? 1);
-                if (config.zIndex) {
-                  existingLayer.setZIndex(config.zIndex);
-                }
+                const el = existingLayer as L.TileLayer;
+                el.setUrl(tileUrl);
+                el.setOpacity(layerOptions.opacity ?? 1);
+                if (config.zIndex) el.setZIndex(config.zIndex);
                 return;
               }
 
               const gibsLayer = L.tileLayer(tileUrl, layerOptions);
-              if (config.zIndex) {
-                gibsLayer.setZIndex(config.zIndex);
-              }
+              if (config.zIndex) gibsLayer.setZIndex(config.zIndex);
               gibsLayer.addTo(map);
               layersRef.current[layerKey] = gibsLayer;
             })
@@ -156,7 +140,14 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           const iso = getCityCountryISO(selectedCity);
           layerName = buildWorldPopLayerName(iso);
         }
-        const wmsParams: L.WMSOptions = {
+        // Extend WMS options to allow non-standard runtime fields we use in the code
+        interface ExtendedWMSOptions extends L.WMSOptions {
+          time?: string;
+          maxZoom?: number;
+          maxNativeZoom?: number;
+        }
+
+        const wmsParams: ExtendedWMSOptions = {
           layers: layerName,
           styles: config.wms.style ?? '',
           format: config.wms.format ?? 'image/png',
@@ -168,13 +159,13 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
         // Ensure WMS layers remain visible when zooming beyond the declared maxZoom by
         // falling back to the map's configured max zoom when available.
         if (map.getMaxZoom) {
-          (wmsParams as any).maxZoom = config.wms.maxZoom ?? map.getMaxZoom();
+          wmsParams.maxZoom = config.wms.maxZoom ?? map.getMaxZoom();
         } else if (config.wms.maxZoom !== undefined) {
-          (wmsParams as any).maxZoom = config.wms.maxZoom;
+          wmsParams.maxZoom = config.wms.maxZoom;
         }
 
         if (config.wms.timeEnabled) {
-          (wmsParams as any).time = selectedDate;
+          wmsParams.time = selectedDate;
         }
         if (config.wms.minZoom !== undefined) {
           wmsParams.minZoom = config.wms.minZoom;
@@ -189,22 +180,23 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
         try {
           // Leaflet WMS layers are implemented as TileLayer with extra methods.
           // Detect existing WMS-capable layer by presence of setParams.
-          if (existingLayer && typeof (existingLayer as any).setParams === 'function') {
-            const el = existingLayer as any;
+          // If existing layer supports setParams (WMS-capable TileLayer), update it in-place.
+          function isWMSLayer(layer: L.Layer | undefined): layer is L.TileLayer & { setParams?: (p: Record<string, any>) => void } {
+            return !!layer && typeof (layer as any).setParams === 'function';
+          }
+
+          if (existingLayer && isWMSLayer(existingLayer)) {
+            const el = existingLayer as L.TileLayer & { setParams?: (p: Record<string, any>) => void };
             el.setOpacity(wmsParams.opacity ?? 1);
-            const params: any = {
+            const params: Record<string, any> = {
               layers: layerName,
               styles: config.wms.style ?? '',
               format: config.wms.format ?? 'image/png',
               transparent: config.wms.transparent ?? true,
             };
-            if (config.wms.timeEnabled) {
-              params.time = selectedDate;
-            }
-            el.setParams(params);
-            if (config.zIndex) {
-              el.setZIndex(config.zIndex);
-            }
+            if (config.wms.timeEnabled) params.time = selectedDate;
+            el.setParams?.(params);
+            if (config.zIndex) el.setZIndex?.(config.zIndex);
             return;
           }
 
