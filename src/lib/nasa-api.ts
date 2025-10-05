@@ -23,8 +23,6 @@ export interface GIBSLayerConfig {
   description: string;
   /** Temporal cadence (daily, 8-day, hourly, etc.) */
   cadence: 'hourly' | 'daily' | '8-day' | 'monthly';
-  /** Optional function to transform the UI date into a WMTS TIME string */
-  timeTransform?: (date: string) => string;
 }
 
 const GIBS_BASE_BY_PROJECTION: Record<GIBSProjection, string> = {
@@ -64,8 +62,7 @@ export const GIBS_LAYERS: Record<string, GIBSLayerConfig> = {
     maxZoom: 9,
     maxNativeZoom: 6,
     description: 'GPM IMERG Half-Hourly Precipitation (0.1°)',
-    cadence: 'hourly',
-    timeTransform: (date: string) => `${date}T00:00:00Z`
+    cadence: 'hourly'
   },
   aod: {
     product: 'MODIS_Combined_Value_Added_AOD',
@@ -119,8 +116,7 @@ export function buildGIBSTileURL(
   }
 
   const baseUrl = GIBS_BASE_BY_PROJECTION[config.projection];
-  const timeString = config.timeTransform ? config.timeTransform(date) : date;
-  return `${baseUrl}/${config.product}/default/${timeString}/${config.tileMatrixSet}/{z}/{y}/{x}.${config.format}`;
+  return `${baseUrl}/${config.product}/default/${date}/${config.tileMatrixSet}/{z}/{y}/{x}.${config.format}`;
 }
 
 /**
