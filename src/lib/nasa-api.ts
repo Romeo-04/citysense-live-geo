@@ -2,56 +2,108 @@
 // Authentication: GIBS WMTS/WMS services are publicly accessible (no token required)
 // For protected NASA services (SEDAC, etc.), see sedac-api.ts
 
+export type GIBSProjection = 'EPSG:3857' | 'EPSG:4326';
+
 export interface GIBSLayerConfig {
-  layer: string;
-  format: string;
+  /** Product identifier exposed by the GIBS catalogue */
+  product: string;
+  /** Map projection supported by the layer */
+  projection: GIBSProjection;
+  /** Tile matrix set advertised by GIBS for Google Maps compatible slippy maps */
   tileMatrixSet: string;
-  resolution: string;
+  /** Native raster format */
+  format: 'png' | 'jpg';
+  /** Recommended minimum zoom for display */
+  minZoom: number;
+  /** Recommended maximum zoom for display */
+  maxZoom: number;
+  /** Maximum native zoom advertised by GIBS */
+  maxNativeZoom: number;
+  /** Human friendly description */
+  description: string;
+  /** Temporal cadence (daily, 8-day, hourly, etc.) */
+  cadence: 'hourly' | 'daily' | '8-day' | 'monthly';
+  /** Optional function to transform the UI date into a WMTS TIME string */
+  timeTransform?: (date: string) => string;
 }
 
-export const GIBS_BASE_URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
+const GIBS_BASE_BY_PROJECTION: Record<GIBSProjection, string> = {
+  'EPSG:3857': 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best',
+  'EPSG:4326': 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best'
+};
 
-export const GIBS_LAYERS: { [key: string]: GIBSLayerConfig } = {
+export const GIBS_LAYERS: Record<string, GIBSLayerConfig> = {
   lst: {
-    layer: 'MODIS_Terra_Land_Surface_Temp_Day',
-    format: 'png',
+    product: 'MOD11A1_LST_Day_1km',
+    projection: 'EPSG:3857',
     tileMatrixSet: 'GoogleMapsCompatible_Level9',
-    resolution: '1km'
+    format: 'png',
+    minZoom: 2,
+    maxZoom: 12,
+    maxNativeZoom: 9,
+    description: 'MODIS Terra Land Surface Temperature (Daytime, 1 km)',
+    cadence: 'daily'
   },
   ndvi: {
-    layer: 'MODIS_Terra_NDVI_8Day',
-    format: 'png',
+    product: 'MOD13A1_NDVI_1km',
+    projection: 'EPSG:3857',
     tileMatrixSet: 'GoogleMapsCompatible_Level9',
-    resolution: '500m'
+    format: 'png',
+    minZoom: 2,
+    maxZoom: 12,
+    maxNativeZoom: 9,
+    description: 'MODIS Terra NDVI (8-day composite, 1 km)',
+    cadence: '8-day'
   },
   precipitation: {
-    layer: 'GPM_3IMERGHH_06_precipitation',
+    product: 'GPM_3IMERGHH_06_precipitation',
+    projection: 'EPSG:3857',
+    tileMatrixSet: 'GoogleMapsCompatible_Level6',
     format: 'png',
-    tileMatrixSet: 'GoogleMapsCompatible_Level9',
-    resolution: '10km'
+    minZoom: 1,
+    maxZoom: 9,
+    maxNativeZoom: 6,
+    description: 'GPM IMERG Half-Hourly Precipitation (0.1°)',
+    cadence: 'hourly',
+    timeTransform: (date: string) => `${date}T00:00:00Z`
   },
   aod: {
-    layer: 'MODIS_Combined_Value_Added_AOD',
+    product: 'MODIS_Combined_Value_Added_AOD',
+    projection: 'EPSG:3857',
+    tileMatrixSet: 'GoogleMapsCompatible_Level8',
     format: 'png',
-    tileMatrixSet: 'GoogleMapsCompatible_Level9',
-    resolution: '1km'
+    minZoom: 1,
+    maxZoom: 11,
+    maxNativeZoom: 8,
+    description: 'MAIAC Aerosol Optical Depth (1 km)',
+    cadence: 'daily'
   },
   no2: {
-    layer: 'OMI_Nitrogen_Dioxide_Tropo_Column',
+    product: 'OMI_Nitrogen_Dioxide_Tropo_Column_L3',
+    projection: 'EPSG:3857',
+    tileMatrixSet: 'GoogleMapsCompatible_Level6',
     format: 'png',
-    tileMatrixSet: 'GoogleMapsCompatible_Level9',
-    resolution: '25km'
+    minZoom: 1,
+    maxZoom: 9,
+    maxNativeZoom: 6,
+    description: 'OMI Tropospheric NO₂ Column (daily, 0.25°)',
+    cadence: 'daily'
   },
   nightlights: {
-    layer: 'VIIRS_SNPP_DayNightBand_ENCC',
+    product: 'VIIRS_SNPP_DayNightBand_ENCC',
+    projection: 'EPSG:3857',
+    tileMatrixSet: 'GoogleMapsCompatible_Level8',
     format: 'png',
-    tileMatrixSet: 'GoogleMapsCompatible_Level9',
-    resolution: '500m'
+    minZoom: 1,
+    maxZoom: 11,
+    maxNativeZoom: 8,
+    description: 'VIIRS Day/Night Band Night Lights (500 m)',
+    cadence: 'daily'
   }
 };
 
 /**
- * Construct GIBS WMTS tile URL with date parameter
+ * Construct GIBS WMTS tile URL with a YYYY-MM-DD date.
  */
 export function buildGIBSTileURL(
   layerKey: string,
@@ -59,17 +111,24 @@ export function buildGIBSTileURL(
 ): string {
   const config = GIBS_LAYERS[layerKey];
   if (!config) {
-    throw new Error(`Unknown layer: ${layerKey}`);
+    throw new Error(`Unknown GIBS layer key: ${layerKey}`);
   }
 
-  return `${GIBS_BASE_URL}/${config.layer}/default/${date}/${config.tileMatrixSet}/{z}/{y}/{x}.${config.format}`;
+  if (!date) {
+    throw new Error('Date is required to request a time-enabled GIBS layer');
+  }
+
+  const baseUrl = GIBS_BASE_BY_PROJECTION[config.projection];
+  const timeString = config.timeTransform ? config.timeTransform(date) : date;
+  return `${baseUrl}/${config.product}/default/${timeString}/${config.tileMatrixSet}/{z}/{y}/{x}.${config.format}`;
 }
 
 /**
  * Fetch GIBS GetCapabilities XML (for advanced use)
  */
-export async function fetchGIBSCapabilities(): Promise<string> {
-  const url = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml';
+export async function fetchGIBSCapabilities(projection: GIBSProjection = 'EPSG:3857'): Promise<string> {
+  const baseUrl = GIBS_BASE_BY_PROJECTION[projection];
+  const url = `${baseUrl}/1.0.0/WMTSCapabilities.xml`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch GIBS capabilities: ${response.statusText}`);
@@ -78,13 +137,13 @@ export async function fetchGIBSCapabilities(): Promise<string> {
 }
 
 /**
- * Validate if a date is available for a given layer (basic check)
- * In production, parse GetCapabilities XML for exact date ranges
+ * Validate if a date is available for a given layer (basic range check)
+ * In production, parse GetCapabilities XML for exact date ranges.
  */
 export function isDateAvailable(date: string): boolean {
   const selectedDate = new Date(date);
   const today = new Date();
   const minDate = new Date('2000-01-01'); // MODIS era start
-  
+
   return selectedDate >= minDate && selectedDate <= today;
 }
