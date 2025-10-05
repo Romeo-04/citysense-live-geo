@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bonifacio Global City",
+        "value": 82,
+        "unit": "% built-up",
+        "narrative": "High-rise core with limited street-level greenery.",
+        "source": "GHSL Built-up (demo)",
+        "sourceDate": "2018"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.03, 14.53],
+            [121.05, 14.53],
+            [121.05, 14.55],
+            [121.03, 14.55],
+            [121.03, 14.53]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Caloocan Manufacturing Belt",
+        "value": 74,
+        "unit": "% built-up",
+        "narrative": "Industrial corridor with patchy drainage.",
+        "source": "GHSL Built-up (demo)",
+        "sourceDate": "2018"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [120.96, 14.69],
+            [121.01, 14.69],
+            [121.01, 14.74],
+            [120.96, 14.74],
+            [120.96, 14.69]
+          ]
+        ]
+      }
+    }
+  ]
+}

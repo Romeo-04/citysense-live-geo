@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Marikina Floodplain",
+        "value": "High",
+        "narrative": "Annual overtopping risk for barangays along the river meander.",
+        "source": "SEDAC Flood Hazard (demo)",
+        "sourceDate": "Baseline"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.09, 14.62],
+            [121.16, 14.62],
+            [121.16, 14.69],
+            [121.09, 14.69],
+            [121.09, 14.62]
+          ]
+        ]
+      }
+    }
+  ]
+}
