@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "UP Diliman Greenbelt",
+        "value": 0.62,
+        "unit": "NDVI",
+        "narrative": "Campus and arboretum canopy moderates neighborhood heat.",
+        "source": "MODIS NDVI (demo)",
+        "sourceDate": "2025-04-08"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.04, 14.64],
+            [121.09, 14.64],
+            [121.09, 14.69],
+            [121.04, 14.69],
+            [121.04, 14.64]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "La Mesa Watershed",
+        "value": 0.71,
+        "unit": "NDVI",
+        "narrative": "Reservoir forest patch anchors north-city greenspace.",
+        "source": "MODIS NDVI (demo)",
+        "sourceDate": "2025-04-08"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.07, 14.72],
+            [121.17, 14.72],
+            [121.17, 14.80],
+            [121.07, 14.80],
+            [121.07, 14.72]
+          ]
+        ]
+      }
+    }
+  ]
+}
