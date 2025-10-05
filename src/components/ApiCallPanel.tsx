@@ -2,8 +2,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
-import { buildGIBSTileURL, GIBS_LAYERS } from "@/lib/nasa-api";
-import { LAYER_CATALOG } from "@/lib/layer-catalog";
+import { buildGIBSTileURL } from "@/lib/nasa-api";
 import {
   buildWorldPopLayerName,
   buildWorldPopDownloadUrl,
@@ -21,7 +20,6 @@ interface ApiCallPanelProps {
   selectedCity: string;
   selectedDate: string;
   zoom: number;
-  activeLayers: string[];
 }
 
 interface ApiCallEntry {
@@ -53,7 +51,6 @@ export const ApiCallPanel = ({
   selectedCity,
   selectedDate,
   zoom,
-  activeLayers,
 }: ApiCallPanelProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -67,80 +64,49 @@ export const ApiCallPanel = ({
     const bboxParam = formatBoundingBox(bbox);
     const polygonWkt = polygonFromBoundingBox(bbox);
 
-    const dynamicCalls: ApiCallEntry[] = [];
+    const lstTemplate = buildGIBSTileURL("lst", selectedDate);
+    const lstUrl = replaceTilePlaceholders(
+      lstTemplate,
+      tileZoom,
+      tileIndices.x,
+      tileIndices.y
+    );
 
-    activeLayers
-      .map(layerId => ({ layerId, config: LAYER_CATALOG[layerId] }))
-      .filter((entry): entry is { layerId: string; config: typeof LAYER_CATALOG[string] } => Boolean(entry.config))
-      .forEach(({ layerId, config }) => {
-        if (config.type === "nasa-gibs" && config.gibsLayerKey) {
-          const gibsConfig = GIBS_LAYERS[config.gibsLayerKey];
-          const template = buildGIBSTileURL(config.gibsLayerKey, selectedDate);
-          const resolvedZoom = Math.min(tileZoom, gibsConfig.maxNativeZoom);
-          const url = replaceTilePlaceholders(
-            template,
-            resolvedZoom,
-            tileIndices.x,
-            tileIndices.y
-          );
+    const precipitationTemplate = buildGIBSTileURL("precipitation", selectedDate);
+    const precipitationUrl = replaceTilePlaceholders(
+      precipitationTemplate,
+      Math.min(tileZoom, 6),
+      tileIndices.x,
+      tileIndices.y
+    );
 
-          dynamicCalls.push({
-            id: `gibs-${layerId}`,
-            label: `NASA GIBS — ${config.shortName}`,
-            description: config.description,
-            url,
-            provider: config.provider,
-          });
-        } else if (config.type === "wms" && config.wms) {
-          let layerName = config.wms.layerName;
-          if (layerId === "worldpop_population") {
-            layerName = buildWorldPopLayerName(iso, DEFAULT_WORLDPOP_YEAR);
-          }
+    const sedacWmsUrl =
+      `https://sedac.ciesin.columbia.edu/geoserver/wms?service=WMS&version=1.3.0&request=GetMap` +
+      `&layers=ndh:ndh-flood-hazard-frequency-distribution&bbox=${bboxParam}` +
+      `&crs=EPSG:4326&width=1024&height=512&styles=&format=image/png&transparent=true`;
 
-          const params = new URLSearchParams({
-            service: "WMS",
-            version: "1.3.0",
-            request: "GetMap",
-            layers: layerName,
-            bbox: bboxParam,
-            crs: "EPSG:4326",
-            width: "1024",
-            height: "512",
-            format: config.wms.format ?? "image/png",
-            transparent: String(config.wms.transparent ?? true),
-            styles: config.wms.style ?? "",
-          });
+    const ghslWmsUrl =
+      `https://ghsl.jrc.ec.europa.eu/ghs_wms?service=WMS&version=1.3.0&request=GetMap` +
+      `&layers=GHS_BUILT_S_E2018_GLOBE_R2019A&bbox=${bboxParam}` +
+      `&crs=EPSG:4326&width=1024&height=512&format=image/png&transparent=true`;
 
-          if (config.wms.timeEnabled) {
-            params.set("time", selectedDate);
-          }
+    const worldPopLayer = buildWorldPopLayerName(iso, DEFAULT_WORLDPOP_YEAR);
+    const worldPopWmsUrl =
+      `https://sdi.worldpop.org/geoserver/worldpop/wms?service=WMS&version=1.3.0&request=GetMap` +
+      `&layers=${worldPopLayer}&bbox=${bboxParam}` +
+      `&crs=EPSG:4326&width=1024&height=512&format=image/png&transparent=true`;
 
-          const url = `${config.wms.baseUrl}?${params.toString()}`;
-
-          dynamicCalls.push({
-            id: `wms-${layerId}`,
-            label: `${config.provider} — ${config.shortName} WMS`,
-            description: config.description,
-            url,
-            provider: config.provider,
-            requiresAuth: config.provider.toLowerCase().includes("sedac"),
-          });
-
-          if (layerId === "worldpop_population") {
-            dynamicCalls.push({
-              id: "worldpop-download",
-              label: "WorldPop raster download",
-              description: "Direct GeoTIFF download via the documented REST helper.",
-              url: buildWorldPopDownloadUrl({ iso, year: DEFAULT_WORLDPOP_YEAR }),
-              provider: "WorldPop",
-            });
-          }
-        }
-      });
+    const worldPopDownloadUrl = buildWorldPopDownloadUrl({
+      iso,
+      year: DEFAULT_WORLDPOP_YEAR,
+    });
 
     const aqueductSql = encodeURIComponent(
       `select * from data where country_iso='${iso}'`
     );
+    const aqueductQueryUrl =
+      `https://api.resourcewatch.org/v1/query/1965d5f9-6d05-4ee1-9ced-28cf3834760c?sql=${aqueductSql}`;
+
     const copernicusOdataUrl =
       `https://catalogue.dataspace.copernicus.eu/odata/v1/Products?` +
       `$filter=startswith(Collection/Name,'SENTINEL-2')` +
@@ -151,12 +117,54 @@ export const ApiCallPanel = ({
     const earthdataTokenCurl =
       "curl -u \"$EDL_USERNAME:$EDL_PASSWORD\" -X POST https://urs.earthdata.nasa.gov/api/users/tokens";
 
-    const supportingCalls: ApiCallEntry[] = [
+    return [
+      {
+        id: "gibs-lst",
+        label: "NASA GIBS — LST tile",
+        description: "Daily MODIS land surface temperature tile for the current map view.",
+        url: lstUrl,
+        provider: "NASA GIBS",
+      },
+      {
+        id: "gibs-precip",
+        label: "NASA GIBS — IMERG precipitation",
+        description: "Half-hourly precipitation tile (set TIME to the exact timestamp).",
+        url: precipitationUrl,
+        provider: "NASA GIBS",
+      },
+      {
+        id: "sedac-wms",
+        label: "SEDAC flood hazard WMS",
+        description: "WMS preview for flood hazard frequency over the selected city extent.",
+        url: sedacWmsUrl,
+        provider: "NASA SEDAC",
+      },
+      {
+        id: "ghsl-wms",
+        label: "GHSL built-up WMS",
+        description: "Built-up surface (2018 release) clipped to the city bounding box.",
+        url: ghslWmsUrl,
+        provider: "JRC GHSL",
+      },
+      {
+        id: "worldpop-wms",
+        label: "WorldPop population WMS",
+        description: "WorldPop national mosaic rendered over the city envelope.",
+        url: worldPopWmsUrl,
+        provider: "WorldPop",
+      },
+      {
+        id: "worldpop-download",
+        label: "WorldPop raster download",
+        description: "Direct GeoTIFF download via the documented REST helper.",
+        url: worldPopDownloadUrl,
+        provider: "WorldPop",
+      },
       {
         id: "aqueduct-query",
         label: "Resource Watch — Aqueduct SQL",
         description: "Baseline water risk query filtered by the city's ISO3 code.",
-        url: `https://api.resourcewatch.org/v1/query/1965d5f9-6d05-4ee1-9ced-28cf3834760c?sql=${aqueductSql}`,
+        url: aqueductQueryUrl,
         provider: "WRI Resource Watch",
       },
       {
@@ -165,7 +173,6 @@ export const ApiCallPanel = ({
         description: "Sentinel-2 search constrained to the city polygon and low cloud cover.",
         url: copernicusOdataUrl,
         provider: "Copernicus Data Space",
-        requiresAuth: true,
       },
       {
         id: "earthdata-token",
@@ -176,16 +183,7 @@ export const ApiCallPanel = ({
         provider: "NASA Earthdata Login",
       },
     ];
-
-    return [...dynamicCalls, ...supportingCalls];
-  }, [
-    activeLayers,
-    center.lat,
-    center.lon,
-    selectedCity,
-    selectedDate,
-    zoom,
-  ]);
+  }, [center, selectedCity, selectedDate, zoom]);
 
   const handleCopy = async (id: string, value: string) => {
     try {

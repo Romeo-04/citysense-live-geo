@@ -9,7 +9,7 @@ const Header = () => {
             <Satellite className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" >
               CitySense
             </h1>
             <p className="text-xs text-muted-foreground">Live Earth Observation Data</p>

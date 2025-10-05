@@ -7,28 +7,6 @@ const loggedMissingFiles = new Set<string>();
 
 const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
-const buildUrlCandidates = (fileName: string): string[] => {
-  const urls = new Set<string>();
-
-  if (basePath) {
-    urls.add(`${basePath}/demo/gee/${fileName}`);
-  }
-
-  urls.add(`/demo/gee/${fileName}`);
-
-  if (typeof window !== "undefined" && window.location) {
-    const isFileProtocol = window.location.protocol === "file:";
-    if (isFileProtocol) {
-      urls.add(`./demo/gee/${fileName}`);
-      urls.add(`demo/gee/${fileName}`);
-    } else if (basePath && !basePath.startsWith("http")) {
-      urls.add(`${window.location.origin}${basePath}/demo/gee/${fileName}`);
-    }
-  }
-
-  return Array.from(urls);
-};
-
 const slugify = (value: string) =>
   value
     .normalize("NFKD")
@@ -81,13 +59,11 @@ export const loadDemoGeoJSON = (
       ].filter(Boolean) as string[];
 
       for (const candidate of candidates) {
-        const urlCandidates = buildUrlCandidates(candidate);
-        for (const url of urlCandidates) {
-          const geojson = await tryFetchGeoJSON(url);
-          if (geojson) {
-            resultCache.set(cacheKey, geojson);
-            return geojson;
-          }
+        const url = `${basePath}/demo/gee/${candidate}`;
+        const geojson = await tryFetchGeoJSON(url);
+        if (geojson) {
+          resultCache.set(cacheKey, geojson);
+          return geojson;
         }
       }
 
