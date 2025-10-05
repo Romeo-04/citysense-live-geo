@@ -5,7 +5,14 @@ import ControlPanel from "@/components/ControlPanel";
 import IndicatorCard from "@/components/IndicatorCard";
 import { LAYER_CATALOG } from "@/lib/layer-catalog";
 import { CITY_COORD_LOOKUP } from "@/lib/cities";
-import { Thermometer, Trees, Droplets, Users, Wind, CloudRain } from "lucide-react";
+import {
+  Thermometer,
+  Trees,
+  Droplets,
+  Users,
+  Wind,
+  CloudRain,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useIndicatorData } from "@/hooks/useIndicatorData";
@@ -21,7 +28,7 @@ const Index = () => {
   const mapZoom = 10;
   const [selectedCity, setSelectedCity] = useState("Metro Manila");
   const [selectedDate, setSelectedDate] = useState(
-    new Date(Date.now() - 86400000).toISOString().split('T')[0] // Yesterday
+    new Date(Date.now() - 86400000).toISOString().split("T")[0] // Yesterday
   );
   const [activeLayers, setActiveLayers] = useState<string[]>([
     "lst",
@@ -32,18 +39,17 @@ const Index = () => {
   ]);
 
   const indicators = useIndicatorData(selectedCity, selectedDate);
-  const { insights: layerInsights, loading: insightsLoading } = useLayerInsights({
-    city: selectedCity,
-    activeLayers,
-    date: selectedDate,
-  });
+  const { insights: layerInsights, loading: insightsLoading } =
+    useLayerInsights({
+      city: selectedCity,
+      activeLayers,
+      date: selectedDate,
+    });
   const { weather, loading: weatherLoading } = useWeatherData(selectedCity);
 
   const handleLayerToggle = (layer: string) => {
-    setActiveLayers(prev =>
-      prev.includes(layer)
-        ? prev.filter(l => l !== layer)
-        : [...prev, layer]
+    setActiveLayers((prev) =>
+      prev.includes(layer) ? prev.filter((l) => l !== layer) : [...prev, layer]
     );
   };
 
@@ -51,29 +57,33 @@ const Index = () => {
     setSelectedCity(city);
   };
 
-  const cityCoords = CITY_COORD_LOOKUP[selectedCity] ?? CITY_COORD_LOOKUP["Metro Manila"];
+  const cityCoords =
+    CITY_COORD_LOOKUP[selectedCity] ?? CITY_COORD_LOOKUP["Metro Manila"];
   const activeLayerSources = Array.from(
     new Set(
       activeLayers
-        .map(layerId => LAYER_CATALOG[layerId]?.provider)
+        .map((layerId) => LAYER_CATALOG[layerId]?.provider)
         .filter((source): source is string => Boolean(source))
     )
   ).join(" · ");
 
   const handleDownloadReport = () => {
-    const layerNames = activeLayers.map(id => LAYER_CATALOG[id]?.name || id);
+    const layerNames = activeLayers.map((id) => LAYER_CATALOG[id]?.name || id);
     const reportContent = generateReport({
       city: selectedCity,
       date: selectedDate,
       activeLayers: layerNames,
       layerIds: activeLayers,
       indicators,
-      weather: weather || undefined
+      weather: weather || undefined,
     });
-    
-    const filename = `${selectedCity.replace(/\s+/g, '_')}_Report_${selectedDate}.txt`;
+
+    const filename = `${selectedCity.replace(
+      /\s+/g,
+      "_"
+    )}_Report_${selectedDate}.txt`;
     downloadReport(reportContent, filename);
-    
+
     toast({
       title: "Report Downloaded",
       description: `Environmental report for ${selectedCity} has been generated.`,
@@ -83,9 +93,9 @@ const Index = () => {
   // Insights/pins removed per user request
 
   return (
-  <div className="min-h-screen bg-background flex flex-col relative z-0">
+    <div className="min-h-screen bg-background flex flex-col relative z-0">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-140px)]">
           {/* Left Sidebar - Controls */}
@@ -98,9 +108,11 @@ const Index = () => {
               activeLayers={activeLayers}
               onLayerToggle={handleLayerToggle}
             />
-            
+
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground">Key Indicators</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">
+                Key Indicators
+              </h3>
               <IndicatorCard
                 title="Heat Exposure"
                 value={indicators.heatExposure.value}
@@ -147,16 +159,14 @@ const Index = () => {
               )}
             </div>
 
-            <Button 
-              className="w-full gap-2" 
+            <Button
+              className="w-full gap-2"
               variant="outline"
               onClick={handleDownloadReport}
             >
               <Download className="w-4 h-4" />
               Export Report
             </Button>
-
-            <WeatherChatbot city={selectedCity} weather={weather} loading={weatherLoading} />
           </div>
 
           {/* Main Map Area */}
@@ -168,15 +178,28 @@ const Index = () => {
               selectedDate={selectedDate}
               selectedCity={selectedCity}
             />
-            <LayerInsightsPanel insights={layerInsights} loading={insightsLoading} />
+            <LayerInsightsPanel
+              insights={layerInsights}
+              loading={insightsLoading}
+            />
             <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur px-3 py-2 rounded-lg border border-border/50 text-xs">
               <p className="text-muted-foreground">
-                Data sources: {activeLayerSources || "Select a layer"} · {selectedDate} · {selectedCity}
+                Data sources: {activeLayerSources || "Select a layer"} ·{" "}
+                {selectedDate} · {selectedCity}
               </p>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Floating AI Chatbot Button */}
+      <div className="fixed bottom-6 right-6 z-[2000]">
+        <WeatherChatbot
+          city={selectedCity}
+          weather={weather}
+          loading={weatherLoading}
+        />
+      </div>
     </div>
   );
 };
