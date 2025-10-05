@@ -120,9 +120,17 @@ export const WeatherChatbot = ({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="lg" className="w-full gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Weather AI Assistant
+        <Button
+          size="lg"
+          className="group h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-sky-400 hover:bg-sky-500 border-0 hover:w-auto w-14 overflow-hidden"
+        >
+          <div className="flex items-center gap-2 px-1">
+            <MessageSquare className="h-6 w-6 text-white flex-shrink-0" />
+            <span className="text-white font-medium whitespace-nowrap opacity-0 max-w-0 group-hover:opacity-100 group-hover:max-w-[200px] transition-all duration-300 overflow-hidden">
+              AI Chatbot
+            </span>
+          </div>
+          <span className="sr-only">Open Weather AI Assistant</span>
         </Button>
       </SheetTrigger>
       <SheetContent
