@@ -1,6 +1,6 @@
+import { useMemo } from "react";
 import { Calendar, MapPin, Layers } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SORTED_LAYER_LIST } from "@/lib/layer-catalog";
+import { DEFAULT_CITIES } from "@/lib/cities";
 
 interface ControlPanelProps {
   selectedCity: string;
@@ -20,23 +22,6 @@ interface ControlPanelProps {
   onLayerToggle: (layer: string) => void;
 }
 
-const cities = [
-  { name: "Metro Manila", lat: 14.5995, lon: 120.9842 },
-  { name: "Tokyo", lat: 35.6762, lon: 139.6503 },
-  { name: "New York", lat: 40.7128, lon: -74.0060 },
-  { name: "London", lat: 51.5074, lon: -0.1278 },
-  { name: "São Paulo", lat: -23.5505, lon: -46.6333 },
-];
-
-const layers = [
-  { id: "lst", name: "Land Surface Temperature", icon: "🌡️" },
-  { id: "ndvi", name: "Vegetation Index (NDVI)", icon: "🌿" },
-  { id: "precipitation", name: "Precipitation", icon: "🌧️" },
-  { id: "aod", name: "Air Quality (AOD)", icon: "💨" },
-  { id: "no2", name: "NO₂ Pollution", icon: "🏭" },
-  { id: "nightlights", name: "Night Lights", icon: "🌃" },
-];
-
 const ControlPanel = ({
   selectedCity,
   onCityChange,
@@ -45,6 +30,14 @@ const ControlPanel = ({
   activeLayers,
   onLayerToggle,
 }: ControlPanelProps) => {
+  const groupedLayers = useMemo(() => {
+    return SORTED_LAYER_LIST.reduce<Record<string, typeof SORTED_LAYER_LIST>>((acc, layer) => {
+      const list = acc[layer.category] ?? [];
+      acc[layer.category] = [...list, layer];
+      return acc;
+    }, {});
+  }, []);
+
   return (
     <div className="space-y-4">
       <Card className="p-4 bg-gradient-to-br from-card to-card/80 backdrop-blur border-border/50">
@@ -57,7 +50,7 @@ const ControlPanel = ({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {cities.map((city) => (
+            {DEFAULT_CITIES.map((city) => (
               <SelectItem key={city.name} value={city.name}>
                 {city.name}
               </SelectItem>
@@ -85,18 +78,27 @@ const ControlPanel = ({
           <Layers className="w-5 h-5 text-primary" />
           <h3 className="font-semibold">Active Layers</h3>
         </div>
-        <div className="space-y-3">
-          {layers.map((layer) => (
-            <div key={layer.id} className="flex items-center justify-between">
-              <Label htmlFor={layer.id} className="flex items-center gap-2 cursor-pointer">
-                <span>{layer.icon}</span>
-                <span className="text-sm">{layer.name}</span>
-              </Label>
-              <Switch
-                id={layer.id}
-                checked={activeLayers.includes(layer.id)}
-                onCheckedChange={() => onLayerToggle(layer.id)}
-              />
+        <div className="space-y-4">
+          {Object.entries(groupedLayers).map(([category, layers]) => (
+            <div key={category} className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                {category}
+              </p>
+              {layers.map((layer) => (
+                <div key={layer.id} className="flex items-center justify-between">
+                  <Label htmlFor={layer.id} className="flex flex-col gap-0.5 cursor-pointer">
+                    <span className="text-sm font-medium">{layer.name}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {layer.provider}
+                    </span>
+                  </Label>
+                  <Switch
+                    id={layer.id}
+                    checked={activeLayers.includes(layer.id)}
+                    onCheckedChange={() => onLayerToggle(layer.id)}
+                  />
+                </div>
+              ))}
             </div>
           ))}
         </div>

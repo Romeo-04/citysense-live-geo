@@ -2,32 +2,36 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { buildGIBSTileURL, GIBS_LAYERS } from "@/lib/nasa-api";
+import { LAYER_CATALOG } from "@/lib/layer-catalog";
+import { buildWorldPopLayerName, getCityCountryISO } from "@/lib/worldpop-api";
 
 interface MapViewProps {
   center: [number, number];
   zoom: number;
   activeLayers: string[];
   selectedDate: string;
+  selectedCity: string;
 }
 
-const MapView = ({ center, zoom, activeLayers, selectedDate }: MapViewProps) => {
+type LayerMap = Record<string, L.Layer>;
+
+const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: MapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const layersRef = useRef<{ [key: string]: L.TileLayer }>({});
+  const layersRef = useRef<LayerMap>({});
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
     const map = L.map(mapRef.current, {
       center,
       zoom,
       zoomControl: true,
+      preferCanvas: true,
     });
 
-    // Add base layer (dark theme)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '©OpenStreetMap, ©CartoDB',
+      attribution: '©OpenStreetMap contributors, ©CartoDB',
       subdomains: 'abcd',
       maxZoom: 19
     }).addTo(map);
@@ -37,6 +41,7 @@ const MapView = ({ center, zoom, activeLayers, selectedDate }: MapViewProps) => 
     return () => {
       map.remove();
       mapInstanceRef.current = null;
+      layersRef.current = {};
     };
   }, []);
 
@@ -47,45 +52,138 @@ const MapView = ({ center, zoom, activeLayers, selectedDate }: MapViewProps) => 
 
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-
     const map = mapInstanceRef.current;
 
     // Remove layers that are no longer active
     Object.keys(layersRef.current).forEach(key => {
       if (!activeLayers.includes(key)) {
-        map.removeLayer(layersRef.current[key]);
+        const layer = layersRef.current[key];
+        map.removeLayer(layer);
         delete layersRef.current[key];
       }
     });
 
-    // Add new active layers using NASA API
     activeLayers.forEach(layerKey => {
-      if (layersRef.current[layerKey]) return;
-
-      // Check if layer exists in GIBS configuration
-      if (!GIBS_LAYERS[layerKey]) {
-        console.warn(`Layer ${layerKey} not found in GIBS catalog`);
+      const config = LAYER_CATALOG[layerKey];
+      if (!config) {
+        console.warn(`Layer ${layerKey} not found in catalog`);
         return;
       }
 
-      try {
-        // Build dynamic tile URL using NASA API utility
-        const tileUrl = buildGIBSTileURL(layerKey, selectedDate);
+      const existingLayer = layersRef.current[layerKey];
 
-        const gibsLayer = L.tileLayer(tileUrl, {
-          attribution: '©NASA GIBS',
-          opacity: 0.7,
-          tileSize: 256,
-          maxZoom: 9,
-        });
+      if (config.type === 'nasa-gibs' && config.gibsLayerKey) {
+        const gibsConfig = GIBS_LAYERS[config.gibsLayerKey];
+        try {
+          const tileUrl = buildGIBSTileURL(config.gibsLayerKey, selectedDate);
+          const layerOptions: L.TileLayerOptions = {
+            tileSize: 256,
+            opacity: config.defaultOpacity ?? 0.7,
+            attribution: `© ${config.provider}`,
+            minZoom: gibsConfig.minZoom,
+            maxZoom: gibsConfig.maxZoom,
+            maxNativeZoom: gibsConfig.maxNativeZoom,
+            crossOrigin: true,
+          };
 
-        gibsLayer.addTo(map);
-        layersRef.current[layerKey] = gibsLayer;
-      } catch (error) {
-        console.error(`Failed to load layer ${layerKey}:`, error);
+          if (existingLayer && existingLayer instanceof L.TileLayer) {
+            existingLayer.setUrl(tileUrl);
+            existingLayer.setOpacity(layerOptions.opacity ?? 1);
+            if (config.zIndex) {
+              existingLayer.setZIndex(config.zIndex);
+            }
+            return;
+          }
+
+          const gibsLayer = L.tileLayer(tileUrl, layerOptions);
+          if (config.zIndex) {
+            gibsLayer.setZIndex(config.zIndex);
+          }
+          gibsLayer.addTo(map);
+          layersRef.current[layerKey] = gibsLayer;
+        } catch (error) {
+          console.error(`Failed to load GIBS layer ${layerKey}:`, error);
+        }
+      } else if (config.type === 'wms' && config.wms) {
+        let layerName = config.wms.layerName;
+        if (layerKey === 'worldpop_population') {
+          const iso = getCityCountryISO(selectedCity);
+          layerName = buildWorldPopLayerName(iso);
+        }
+        const wmsParams: L.WMSOptions = {
+          layers: layerName,
+          styles: config.wms.style ?? '',
+          format: config.wms.format ?? 'image/png',
+          transparent: config.wms.transparent ?? true,
+          opacity: config.defaultOpacity ?? 0.7,
+          attribution: `© ${config.provider}`,
+          crossOrigin: true,
+        };
+
+        if (config.wms.timeEnabled) {
+          (wmsParams as any).time = selectedDate;
+        }
+        if (config.wms.minZoom !== undefined) {
+          wmsParams.minZoom = config.wms.minZoom;
+        }
+        if (config.wms.maxZoom !== undefined) {
+          wmsParams.maxZoom = config.wms.maxZoom;
+        }
+        if (config.wms.maxNativeZoom !== undefined) {
+          wmsParams.maxNativeZoom = config.wms.maxNativeZoom;
+        }
+
+        if (existingLayer && existingLayer instanceof L.TileLayer.WMS) {
+          existingLayer.setOpacity(wmsParams.opacity ?? 1);
+          const params: Record<string, any> = {
+            layers: layerName,
+            styles: config.wms.style ?? '',
+            format: config.wms.format ?? 'image/png',
+            transparent: config.wms.transparent ?? true,
+          };
+          if (config.wms.timeEnabled) {
+            params.time = selectedDate;
+          }
+          existingLayer.setParams(params);
+          if (config.zIndex) {
+            existingLayer.setZIndex(config.zIndex);
+          }
+          return;
+        }
+
+        const wmsLayer = L.tileLayer.wms(config.wms.baseUrl, wmsParams);
+        if (config.zIndex) {
+          wmsLayer.setZIndex(config.zIndex);
+        }
+        wmsLayer.addTo(map);
+        layersRef.current[layerKey] = wmsLayer;
+      } else if (config.type === 'xyz' && config.xyz) {
+        const xyzOptions: L.TileLayerOptions = {
+          opacity: config.defaultOpacity ?? 0.7,
+          attribution: `© ${config.provider}`,
+          minZoom: config.xyz.minZoom,
+          maxZoom: config.xyz.maxZoom,
+          crossOrigin: true,
+        };
+
+        if (existingLayer && existingLayer instanceof L.TileLayer) {
+          existingLayer.setUrl(config.xyz.url);
+          existingLayer.setOpacity(xyzOptions.opacity ?? 1);
+          if (config.zIndex) {
+            existingLayer.setZIndex(config.zIndex);
+          }
+          return;
+        }
+
+        const xyzLayer = L.tileLayer(config.xyz.url, xyzOptions);
+        if (config.zIndex) {
+          xyzLayer.setZIndex(config.zIndex);
+        }
+        xyzLayer.addTo(map);
+        layersRef.current[layerKey] = xyzLayer;
       }
     });
-  }, [activeLayers, selectedDate]);
+  }, [activeLayers, selectedDate, selectedCity]);
 
   return <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden shadow-lg" />;
 };
