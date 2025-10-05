@@ -103,6 +103,8 @@ const ControlPanel = ({
           ))}
         </div>
       </Card>
+
+      {/* Assistant removed temporarily */}
     </div>
   );
 };
