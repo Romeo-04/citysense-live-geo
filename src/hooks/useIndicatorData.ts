@@ -1,4 +1,13 @@
 import { useState, useEffect } from "react";
+import {
+  fetchPopulationDensity,
+  fetchBuiltUpSurface,
+  fetchFloodHazard,
+  fetchLST,
+  fetchNDVI,
+  fetchAOD,
+  fetchNO2,
+} from "@/lib/indicator-api";
 
 export interface IndicatorData {
   heatExposure: {
@@ -39,207 +48,115 @@ export interface IndicatorData {
   };
 }
 
-const CITY_DATA: Record<string, IndicatorData> = {
-  "Metro Manila": {
-    heatExposure: {
-      value: "8.2M",
-      description: "Population in UHI zones",
-      trend: "up",
-      rawValue: 8200000
-    },
-    greenspace: {
-      value: "42%",
-      description: "Within 500m of parks",
-      trend: "down",
-      rawValue: 42
-    },
-    floodRisk: {
-      value: "High",
-      description: "Last 24h precipitation: 45mm",
-      trend: "up",
-      severity: "High"
-    },
-    population: {
-      value: "24.5K",
-      description: "Per sq km average",
-      trend: "neutral",
-      rawValue: 24500
-    },
-    airQuality: {
-      value: "Moderate",
-      description: "AQI: 78",
-      trend: "neutral",
-      aqi: 78
-    },
-    temperature: {
-      value: "32°C",
-      description: "Current temperature",
-      trend: "up",
-      celsius: 32
-    }
+const DEFAULT_INDICATORS: IndicatorData = {
+  heatExposure: {
+    value: "Loading...",
+    description: "Fetching data...",
+    trend: "neutral",
+    rawValue: 0,
   },
-  "Tokyo": {
-    heatExposure: {
-      value: "12.5M",
-      description: "Population in UHI zones",
-      trend: "neutral",
-      rawValue: 12500000
-    },
-    greenspace: {
-      value: "58%",
-      description: "Within 500m of parks",
-      trend: "up",
-      rawValue: 58
-    },
-    floodRisk: {
-      value: "Medium",
-      description: "Last 24h precipitation: 12mm",
-      trend: "neutral",
-      severity: "Medium"
-    },
-    population: {
-      value: "16.2K",
-      description: "Per sq km average",
-      trend: "down",
-      rawValue: 16200
-    },
-    airQuality: {
-      value: "Good",
-      description: "AQI: 45",
-      trend: "down",
-      aqi: 45
-    },
-    temperature: {
-      value: "24°C",
-      description: "Current temperature",
-      trend: "neutral",
-      celsius: 24
-    }
+  greenspace: {
+    value: "Loading...",
+    description: "Fetching data...",
+    trend: "neutral",
+    rawValue: 0,
   },
-  "New York": {
-    heatExposure: {
-      value: "5.8M",
-      description: "Population in UHI zones",
-      trend: "up",
-      rawValue: 5800000
-    },
-    greenspace: {
-      value: "65%",
-      description: "Within 500m of parks",
-      trend: "up",
-      rawValue: 65
-    },
-    floodRisk: {
-      value: "Low",
-      description: "Last 24h precipitation: 3mm",
-      trend: "down",
-      severity: "Low"
-    },
-    population: {
-      value: "11.2K",
-      description: "Per sq km average",
-      trend: "neutral",
-      rawValue: 11200
-    },
-    airQuality: {
-      value: "Good",
-      description: "AQI: 52",
-      trend: "down",
-      aqi: 52
-    },
-    temperature: {
-      value: "18°C",
-      description: "Current temperature",
-      trend: "down",
-      celsius: 18
-    }
+  floodRisk: {
+    value: "Loading...",
+    description: "Fetching data...",
+    trend: "neutral",
+    severity: "Unknown",
   },
-  "London": {
-    heatExposure: {
-      value: "4.2M",
-      description: "Population in UHI zones",
-      trend: "neutral",
-      rawValue: 4200000
-    },
-    greenspace: {
-      value: "72%",
-      description: "Within 500m of parks",
-      trend: "up",
-      rawValue: 72
-    },
-    floodRisk: {
-      value: "Medium",
-      description: "Last 24h precipitation: 8mm",
-      trend: "neutral",
-      severity: "Medium"
-    },
-    population: {
-      value: "5.7K",
-      description: "Per sq km average",
-      trend: "neutral",
-      rawValue: 5700
-    },
-    airQuality: {
-      value: "Moderate",
-      description: "AQI: 68",
-      trend: "neutral",
-      aqi: 68
-    },
-    temperature: {
-      value: "15°C",
-      description: "Current temperature",
-      trend: "neutral",
-      celsius: 15
-    }
+  population: {
+    value: "Loading...",
+    description: "Fetching data...",
+    trend: "neutral",
+    rawValue: 0,
   },
-  "São Paulo": {
-    heatExposure: {
-      value: "9.1M",
-      description: "Population in UHI zones",
-      trend: "up",
-      rawValue: 9100000
-    },
-    greenspace: {
-      value: "38%",
-      description: "Within 500m of parks",
-      trend: "down",
-      rawValue: 38
-    },
-    floodRisk: {
-      value: "High",
-      description: "Last 24h precipitation: 52mm",
-      trend: "up",
-      severity: "High"
-    },
-    population: {
-      value: "7.9K",
-      description: "Per sq km average",
-      trend: "up",
-      rawValue: 7900
-    },
-    airQuality: {
-      value: "Moderate",
-      description: "AQI: 72",
-      trend: "up",
-      aqi: 72
-    },
-    temperature: {
-      value: "28°C",
-      description: "Current temperature",
-      trend: "up",
-      celsius: 28
-    }
-  }
+  airQuality: {
+    value: "Loading...",
+    description: "Fetching data...",
+    trend: "neutral",
+    aqi: 0,
+  },
+  temperature: {
+    value: "Loading...",
+    description: "Fetching data...",
+    trend: "neutral",
+    celsius: 0,
+  },
 };
 
-export const useIndicatorData = (city: string): IndicatorData => {
-  const [data, setData] = useState<IndicatorData>(
-    CITY_DATA[city] || CITY_DATA["Metro Manila"]
-  );
+export const useIndicatorData = (city: string, date: string): IndicatorData => {
+  const [data, setData] = useState<IndicatorData>(DEFAULT_INDICATORS);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setData(CITY_DATA[city] || CITY_DATA["Metro Manila"]);
-  }, [city]);
+    const fetchData = async () => {
+      setLoading(true);
+
+      // Fetch data from APIs
+      const [population, builtUp, floodHazard, lst, ndvi, aod, no2] = await Promise.all([
+        fetchPopulationDensity(city),
+        fetchBuiltUpSurface(city),
+        fetchFloodHazard(city),
+        fetchLST(city, date),
+        fetchNDVI(city, date),
+        fetchAOD(city, date),
+        fetchNO2(city, date),
+      ]);
+
+      // Calculate indicators based on fetched data
+      const heatExposureValue = lst || aod ? (lst || 0) + (aod || 0) : 0; // Placeholder calculation
+      const greenspaceValue = ndvi ? ndvi * 100 : 0; // NDVI as percentage
+      const floodRiskValue = floodHazard ? floodHazard : 0;
+      const populationValue = population || 0;
+      const airQualityValue = (aod || 0) + (no2 || 0); // Placeholder AQI calculation
+
+      setData({
+        heatExposure: {
+          value: heatExposureValue > 0 ? `${heatExposureValue.toFixed(1)}°C` : "N/A",
+          description: "Heat exposure from LST and AOD",
+          trend: "neutral", // Could be calculated based on trends
+          rawValue: heatExposureValue,
+        },
+        greenspace: {
+          value: greenspaceValue > 0 ? `${greenspaceValue.toFixed(1)}%` : "N/A",
+          description: "Greenspace coverage from NDVI",
+          trend: "neutral",
+          rawValue: greenspaceValue,
+        },
+        floodRisk: {
+          value: floodRiskValue > 0 ? `${floodRiskValue.toFixed(1)}` : "N/A",
+          description: "Flood hazard frequency",
+          trend: "neutral",
+          severity: floodRiskValue > 5 ? "High" : floodRiskValue > 2 ? "Medium" : "Low",
+        },
+        population: {
+          value: populationValue > 0 ? `${populationValue}K` : "N/A",
+          description: "Population density per sq km",
+          trend: "neutral",
+          rawValue: populationValue,
+        },
+        airQuality: {
+          value: airQualityValue > 0 ? (airQualityValue > 100 ? "Poor" : airQualityValue > 50 ? "Moderate" : "Good") : "N/A",
+          description: `AQI: ${airQualityValue.toFixed(0)}`,
+          trend: "neutral",
+          aqi: airQualityValue,
+        },
+        temperature: {
+          value: lst ? `${lst.toFixed(1)}°C` : "N/A",
+          description: "Land surface temperature",
+          trend: "neutral",
+          celsius: lst || 0,
+        },
+      });
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [city, date]);
 
   return data;
 };

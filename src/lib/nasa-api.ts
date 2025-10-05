@@ -116,7 +116,8 @@ export function buildGIBSTileURL(
   }
 
   const baseUrl = GIBS_BASE_BY_PROJECTION[config.projection];
-  return `${baseUrl}/${config.product}/default/${date}/${config.tileMatrixSet}/{z}/{y}/{x}.${config.format}`;
+  // Leaflet expects {z}/{x}/{y} in tile URLs — ensure the template matches that convention
+  return `${baseUrl}/${config.product}/default/${date}/${config.tileMatrixSet}/{z}/{x}/{y}.${config.format}`;
 }
 
 // --- Capability-aware helpers --------------------------------------------
