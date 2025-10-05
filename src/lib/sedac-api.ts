@@ -4,17 +4,9 @@
 export const SEDAC_WMS_BASE = 'https://sedac.ciesin.columbia.edu/geoserver/wms';
 export const SEDAC_WCS_BASE = 'https://sedac.ciesin.columbia.edu/geoserver/wcs';
 
-function resolveEarthdataToken(tokenOverride?: string): string {
+function resolveEarthdataToken(tokenOverride?: string): string | undefined {
   const envToken = import.meta.env?.VITE_NASA_EARTHDATA_TOKEN;
-  const token = tokenOverride ?? envToken;
-
-  if (!token) {
-    throw new Error(
-      'NASA Earthdata token is required. Set VITE_NASA_EARTHDATA_TOKEN in your environment or pass a token explicitly.'
-    );
-  }
-
-  return token;
+  return tokenOverride ?? envToken;
 }
 
 export interface SEDACLayerConfig {
@@ -76,12 +68,12 @@ export async function fetchSEDACMap(
   const url = `${SEDAC_WMS_BASE}?${params.toString()}`;
 
   const token = resolveEarthdataToken(authToken);
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const response = await fetch(url, { headers });
 
   if (!response.ok) {
     throw new Error(`SEDAC WMS request failed: ${response.statusText}`);
@@ -109,12 +101,12 @@ export async function fetchSEDACCapabilities(authToken?: string): Promise<string
   const url = `${SEDAC_WMS_BASE}?service=WMS&version=1.3.0&request=GetCapabilities`;
 
   const token = resolveEarthdataToken(authToken);
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const response = await fetch(url, { headers });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch SEDAC capabilities: ${response.statusText}`);
@@ -150,12 +142,12 @@ export async function downloadSEDACRaster(
   const url = `${SEDAC_WCS_BASE}?${params.toString()}`;
 
   const token = resolveEarthdataToken(authToken);
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const response = await fetch(url, { headers });
 
   if (!response.ok) {
     throw new Error(`SEDAC WCS request failed: ${response.statusText}`);
