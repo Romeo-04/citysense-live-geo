@@ -4,13 +4,6 @@ import "leaflet/dist/leaflet.css";
 import { buildGIBSTileURL, GIBS_LAYERS } from "@/lib/nasa-api";
 import { LAYER_CATALOG } from "@/lib/layer-catalog";
 import { buildWorldPopLayerName, getCityCountryISO } from "@/lib/worldpop-api";
-import {
-  addDemoFeatureInteractions,
-  applyDemoPointStyle,
-  buildDemoGeoJSON,
-  DEMO_LAYER_CONFIGS,
-} from "@/lib/demo-data";
-import { CITY_COORD_LOOKUP } from "@/lib/cities";
 
 interface MapViewProps {
   center: [number, number];
@@ -26,8 +19,6 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layersRef = useRef<LayerMap>({});
-  const demoLayersRef = useRef<Record<string, { layer: L.Layer; city: string }>>({});
-  const [centerLat, centerLon] = center;
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -69,14 +60,6 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
         const layer = layersRef.current[key];
         map.removeLayer(layer);
         delete layersRef.current[key];
-      }
-    });
-
-    Object.keys(demoLayersRef.current).forEach((key) => {
-      if (!activeLayers.includes(key)) {
-        const entry = demoLayersRef.current[key];
-        map.removeLayer(entry.layer);
-        delete demoLayersRef.current[key];
       }
     });
 
@@ -152,14 +135,14 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
 
         if (existingLayer && existingLayer instanceof L.TileLayer.WMS) {
           existingLayer.setOpacity(wmsParams.opacity ?? 1);
-          const params: Record<string, any> = {
+          const params: L.WMSParams = {
             layers: layerName,
             styles: config.wms.style ?? '',
             format: config.wms.format ?? 'image/png',
             transparent: config.wms.transparent ?? true,
           };
           if (config.wms.timeEnabled) {
-            params.time = selectedDate;
+            (params as any).time = selectedDate;
           }
           existingLayer.setParams(params);
           if (config.zIndex) {
@@ -199,49 +182,8 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
         xyzLayer.addTo(map);
         layersRef.current[layerKey] = xyzLayer;
       }
-
-      const demoConfig = DEMO_LAYER_CONFIGS[layerKey];
-      if (demoConfig) {
-        const cityCoords = CITY_COORD_LOOKUP[selectedCity];
-        const context = cityCoords
-          ? { lat: cityCoords.lat, lon: cityCoords.lon }
-          : { lat: centerLat, lon: centerLon };
-        const existingDemo = demoLayersRef.current[layerKey];
-        const shouldRebuild = !existingDemo || existingDemo.city !== selectedCity;
-
-        if (existingDemo && shouldRebuild) {
-          map.removeLayer(existingDemo.layer);
-          delete demoLayersRef.current[layerKey];
-        }
-
-        if (shouldRebuild) {
-          const demoGeoJSON = buildDemoGeoJSON(layerKey, context);
-          if (demoGeoJSON) {
-            const paneName = `demo-${layerKey}`;
-            if (!map.getPane(paneName)) {
-              const pane = map.createPane(paneName);
-              pane.style.zIndex = String((config.zIndex ?? 500) + 100);
-            }
-
-            const demoLayer = L.geoJSON(demoGeoJSON, {
-              pane: `demo-${layerKey}`,
-              style: typeof demoConfig.style === 'function' ? demoConfig.style : undefined,
-              pointToLayer:
-                demoConfig.type === 'point'
-                  ? (feature, latlng) => applyDemoPointStyle(feature, latlng, demoConfig)
-                  : undefined,
-            });
-
-            addDemoFeatureInteractions(demoLayer, config, demoConfig);
-            demoLayer.addTo(map);
-            demoLayersRef.current[layerKey] = { layer: demoLayer, city: selectedCity };
-          }
-        } else if (existingDemo && !map.hasLayer(existingDemo.layer)) {
-          existingDemo.layer.addTo(map);
-        }
-      }
     });
-  }, [activeLayers, centerLat, centerLon, selectedCity, selectedDate]);
+  }, [activeLayers, selectedDate, selectedCity]);
 
   return <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden shadow-lg" />;
 };
