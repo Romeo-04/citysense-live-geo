@@ -9,9 +9,12 @@ import { Thermometer, Trees, Droplets, Users, Wind, CloudRain } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useIndicatorData } from "@/hooks/useIndicatorData";
+import { useLayerInsights } from "@/hooks/useLayerInsights";
 import { useWeatherData } from "@/hooks/useWeatherData";
 import { generateReport, downloadReport } from "@/lib/report-generator";
 import { useToast } from "@/hooks/use-toast";
+import WeatherChatbot from "@/components/WeatherChatbot";
+import { LayerInsightsPanel } from "@/components/LayerInsightsPanel";
 
 const Index = () => {
   const { toast } = useToast();
@@ -28,7 +31,12 @@ const Index = () => {
     "worldpop_population",
   ]);
 
-  const indicators = useIndicatorData(selectedCity);
+  const indicators = useIndicatorData(selectedCity, selectedDate);
+  const { insights: layerInsights, loading: insightsLoading } = useLayerInsights({
+    city: selectedCity,
+    activeLayers,
+    date: selectedDate,
+  });
   const { weather, loading: weatherLoading } = useWeatherData(selectedCity);
 
   const handleLayerToggle = (layer: string) => {
@@ -75,7 +83,7 @@ const Index = () => {
   // Insights/pins removed per user request
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+  <div className="min-h-screen bg-background flex flex-col relative z-0">
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-6">
@@ -147,6 +155,8 @@ const Index = () => {
               <Download className="w-4 h-4" />
               Export Report
             </Button>
+
+            <WeatherChatbot city={selectedCity} weather={weather} loading={weatherLoading} />
           </div>
 
           {/* Main Map Area */}
@@ -158,6 +168,7 @@ const Index = () => {
               selectedDate={selectedDate}
               selectedCity={selectedCity}
             />
+            <LayerInsightsPanel insights={layerInsights} loading={insightsLoading} />
             <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur px-3 py-2 rounded-lg border border-border/50 text-xs">
               <p className="text-muted-foreground">
                 Data sources: {activeLayerSources || "Select a layer"} · {selectedDate} · {selectedCity}

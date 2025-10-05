@@ -10,6 +10,7 @@ CitySense is a geospatial intelligence cockpit for urban planners who need live 
 - 🌆 **Urbanization & Equity:** JRC GHSL built-up surfaces and WorldPop population density to highlight exposure hotspots.
 - 🗺️ **Live WMTS/WMS integration:** Layer catalog centralizes NASA GIBS, SEDAC, GHSL, and WorldPop endpoints with correct projections and metadata.
 - 🔐 **Token management:** Scripted helper to mint NASA Earthdata tokens and optional front-end usage for authenticated downloads.
+- 🤖 **AI weather assistant:** DeepSeek R1 chatbot blends live Open-Meteo feeds with actionable planning advice.
 
 ## Getting started
 
@@ -29,10 +30,14 @@ The development server starts on `http://localhost:5173` with hot reload.
 
 ### Environment variables
 
-Create a `.env.local` (gitignored) if you plan to hit authenticated NASA endpoints (e.g., SEDAC downloads):
+Create a `.env.local` (gitignored) if you plan to hit authenticated NASA endpoints (e.g., SEDAC downloads) and enable the AI assistant:
 
 ```bash
 VITE_NASA_EARTHDATA_TOKEN=<your_token>
+VITE_DEEPSEEK_API_KEY=<your_deepseek_api_key>
+# optional overrides
+VITE_DEEPSEEK_MODEL=deepseek-reasoner
+VITE_DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
 ```
 
 Generate the token from NASA Earthdata Login using the bundled helper:
@@ -42,6 +47,16 @@ npm run fetch:earthdata-token -- --save
 ```
 
 This prompts for your NASA credentials (or reads `NASA_EARTHDATA_USERNAME`/`NASA_EARTHDATA_PASSWORD`) and stores a short-lived bearer token in `.env.local`.
+
+To enable the DeepSeek-powered chatbot, create an API key from your DeepSeek console and export it before starting the dev server (PowerShell example shown):
+
+```powershell
+$env:VITE_DEEPSEEK_API_KEY = "sk-your-key"
+# optional model override
+$env:VITE_DEEPSEEK_MODEL = "deepseek-reasoner"
+```
+
+If you proxy requests through a different domain, set `VITE_DEEPSEEK_API_URL` accordingly. All values can live in `.env.local` for convenience.
 
 ## Data services cheat sheet
 

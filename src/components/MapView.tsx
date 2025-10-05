@@ -99,15 +99,35 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
             .then(tileUrl => {
               // Log the resolved URL for debugging (Leaflet will substitute {z}/{x}/{y})
               console.debug(`GIBS resolved URL for ${config.gibsLayerKey}:`, tileUrl);
+              // Use the map's max zoom as a fallback so layers remain visible when the user zooms in
+              const mapMaxZoom = map.getMaxZoom ? map.getMaxZoom() : undefined;
               const layerOptions: L.TileLayerOptions = {
             tileSize: 256,
             opacity: config.defaultOpacity ?? 0.7,
             attribution: `© ${config.provider}`,
             minZoom: gibsConfig.minZoom,
-            maxZoom: gibsConfig.maxZoom,
+            // allow display up to the map's max zoom; keep maxNativeZoom to avoid requesting unsupported tiles
+            maxZoom: mapMaxZoom ?? gibsConfig.maxZoom,
             maxNativeZoom: gibsConfig.maxNativeZoom,
             crossOrigin: true,
           };
+
+          if (existingLayer && existingLayer instanceof L.TileLayer) {
+            const el = existingLayer as any;
+            el.setUrl(tileUrl);
+            el.setOpacity(layerOptions.opacity ?? 1);
+            if (config.zIndex) {
+              el.setZIndex(config.zIndex);
+            }
+            return;
+          }
+
+          const gibsLayer = L.tileLayer(tileUrl, layerOptions);
+          if (config.zIndex) {
+            gibsLayer.setZIndex(config.zIndex);
+          }
+          gibsLayer.addTo(map);
+          layersRef.current[layerKey] = gibsLayer;
               if (existingLayer && existingLayer instanceof L.TileLayer) {
                 existingLayer.setUrl(tileUrl);
                 existingLayer.setOpacity(layerOptions.opacity ?? 1);
@@ -145,6 +165,13 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           attribution: `© ${config.provider}`,
           crossOrigin: true,
         };
+        // Ensure WMS layers remain visible when zooming beyond the declared maxZoom by
+        // falling back to the map's configured max zoom when available.
+        if (map.getMaxZoom) {
+          (wmsParams as any).maxZoom = config.wms.maxZoom ?? map.getMaxZoom();
+        } else if (config.wms.maxZoom !== undefined) {
+          (wmsParams as any).maxZoom = config.wms.maxZoom;
+        }
 
         if (config.wms.timeEnabled) {
           (wmsParams as any).time = selectedDate;
@@ -159,44 +186,53 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
           wmsParams.maxNativeZoom = config.wms.maxNativeZoom;
         }
 
-        if (existingLayer && existingLayer instanceof L.TileLayer.WMS) {
-          existingLayer.setOpacity(wmsParams.opacity ?? 1);
-          const params: L.WMSParams = {
-            layers: layerName,
-            styles: config.wms.style ?? '',
-            format: config.wms.format ?? 'image/png',
-            transparent: config.wms.transparent ?? true,
-          };
-          if (config.wms.timeEnabled) {
-            (params as any).time = selectedDate;
+        try {
+          // Leaflet WMS layers are implemented as TileLayer with extra methods.
+          // Detect existing WMS-capable layer by presence of setParams.
+          if (existingLayer && typeof (existingLayer as any).setParams === 'function') {
+            const el = existingLayer as any;
+            el.setOpacity(wmsParams.opacity ?? 1);
+            const params: any = {
+              layers: layerName,
+              styles: config.wms.style ?? '',
+              format: config.wms.format ?? 'image/png',
+              transparent: config.wms.transparent ?? true,
+            };
+            if (config.wms.timeEnabled) {
+              params.time = selectedDate;
+            }
+            el.setParams(params);
+            if (config.zIndex) {
+              el.setZIndex(config.zIndex);
+            }
+            return;
           }
-          existingLayer.setParams(params);
-          if (config.zIndex) {
-            existingLayer.setZIndex(config.zIndex);
-          }
-          return;
-        }
 
-        const wmsLayer = L.tileLayer.wms(config.wms.baseUrl, wmsParams);
-        if (config.zIndex) {
-          wmsLayer.setZIndex(config.zIndex);
+          const wmsLayer = L.tileLayer.wms(config.wms.baseUrl, wmsParams);
+          if (config.zIndex) {
+            wmsLayer.setZIndex(config.zIndex);
+          }
+          wmsLayer.addTo(map);
+          layersRef.current[layerKey] = wmsLayer;
+        } catch (err) {
+          console.error(`Failed to create WMS layer ${layerKey}:`, err);
         }
-        wmsLayer.addTo(map);
-        layersRef.current[layerKey] = wmsLayer;
       } else if (config.type === 'xyz' && config.xyz) {
         const xyzOptions: L.TileLayerOptions = {
           opacity: config.defaultOpacity ?? 0.7,
           attribution: `© ${config.provider}`,
           minZoom: config.xyz.minZoom,
-          maxZoom: config.xyz.maxZoom,
+          // allow XYZ layers to remain visible at high zoom when map supports it
+          maxZoom: map.getMaxZoom ? (config.xyz.maxZoom ?? map.getMaxZoom()) : config.xyz.maxZoom,
           crossOrigin: true,
         };
 
         if (existingLayer && existingLayer instanceof L.TileLayer) {
-          existingLayer.setUrl(config.xyz.url);
-          existingLayer.setOpacity(xyzOptions.opacity ?? 1);
+          const el = existingLayer as any;
+          el.setUrl(config.xyz.url);
+          el.setOpacity(xyzOptions.opacity ?? 1);
           if (config.zIndex) {
-            existingLayer.setZIndex(config.zIndex);
+            el.setZIndex(config.zIndex);
           }
           return;
         }
@@ -211,7 +247,7 @@ const MapView = ({ center, zoom, activeLayers, selectedDate, selectedCity }: Map
     });
   }, [activeLayers, selectedDate, selectedCity]);
 
-  return <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden shadow-lg" />;
+  return <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden shadow-lg z-[10]" />;
 };
 
 export default MapView;
